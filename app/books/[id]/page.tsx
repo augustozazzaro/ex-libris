@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import ReadingStateCard from '@/components/ReadingStateCard'
 
 import {
   buildLocationPath,
@@ -546,6 +547,10 @@ export default function BookPage() {
               />
 
             </section>
+
+            <ReadingStateCard
+              bookId={book.id}
+            />
 
             {book.description && (
               <section className="exl-glass exl-card p-6 mt-5">

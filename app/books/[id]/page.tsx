@@ -1,10 +1,29 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import {
+  useEffect,
+  useState,
+} from 'react'
+
+import {
+  useParams,
+  useRouter,
+} from 'next/navigation'
+
 import Link from 'next/link'
 
+import {
+  ChevronLeft,
+  Pencil,
+  MapPin,
+  BookOpen,
+  Trash2,
+  MoreHorizontal,
+  Heart,
+} from 'lucide-react'
+
 import { createClient } from '@/utils/supabase/client'
+
 import {
   buildLocationPath,
   LocationItem,
@@ -16,6 +35,7 @@ type Book = {
 
   title: string
   subtitle: string | null
+
   authors: string[] | null
 
   isbn_10: string | null
@@ -33,6 +53,7 @@ type Book = {
   cover_url: string | null
   custom_cover_url: string | null
 
+  favorite: boolean
   status: string
   notes: string | null
 
@@ -42,58 +63,62 @@ type Book = {
 export default function BookPage() {
   const params = useParams()
   const router = useRouter()
+
   const supabase = createClient()
 
-  const [book, setBook] = useState<Book | null>(null)
-  const [locations, setLocations] = useState<LocationItem[]>([])
+  const [book, setBook] =
+    useState<Book | null>(null)
 
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [locations, setLocations] =
+    useState<LocationItem[]>([])
 
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState('')
+  const [editing, setEditing] =
+    useState(false)
 
-  const [title, setTitle] = useState('')
-  const [subtitle, setSubtitle] = useState('')
-  const [authors, setAuthors] = useState('')
-  const [publisher, setPublisher] = useState('')
-  const [publicationYear, setPublicationYear] = useState('')
-  const [pages, setPages] = useState('')
-  const [notes, setNotes] = useState('')
-  const [locationId, setLocationId] = useState('')
-  const [status, setStatus] = useState('home')
+  const [loading, setLoading] =
+    useState(true)
+
+  const [saving, setSaving] =
+    useState(false)
+
+  const [error, setError] =
+    useState('')
+
+  const [title, setTitle] =
+    useState('')
+
+  const [subtitle, setSubtitle] =
+    useState('')
+
+  const [authors, setAuthors] =
+    useState('')
+
+  const [publisher, setPublisher] =
+    useState('')
+
+  const [publicationYear, setPublicationYear] =
+    useState('')
+
+  const [pages, setPages] =
+    useState('')
+
+  const [locationId, setLocationId] =
+    useState('')
+
+  const [notes, setNotes] =
+    useState('')
 
   async function loadBook() {
     setLoading(true)
-    setError('')
 
-    const { data, error: bookError } = await supabase
-      .from('books')
-      .select(`
-        id,
-        family_id,
-        title,
-        subtitle,
-        authors,
-        isbn_10,
-        isbn_13,
-        publisher,
-        publication_year,
-        language,
-        pages,
-        categories,
-        description,
-        cover_url,
-        custom_cover_url,
-        status,
-        notes,
-        location_id
-      `)
-      .eq('id', params.id)
-      .single()
+    const { data, error } =
+      await supabase
+        .from('books')
+        .select('*')
+        .eq('id', params.id)
+        .single()
 
-    if (bookError || !data) {
+    if (error || !data) {
       setError('Libro non trovato.')
       setLoading(false)
       return
@@ -101,25 +126,48 @@ export default function BookPage() {
 
     setBook(data)
 
-    setTitle(data.title ?? '')
-    setSubtitle(data.subtitle ?? '')
-    setAuthors(data.authors?.join(', ') ?? '')
-    setPublisher(data.publisher ?? '')
+    setTitle(
+      data.title ?? ''
+    )
+
+    setSubtitle(
+      data.subtitle ?? ''
+    )
+
+    setAuthors(
+      data.authors?.join(', ') ??
+        ''
+    )
+
+    setPublisher(
+      data.publisher ?? ''
+    )
+
     setPublicationYear(
       data.publication_year
-        ? String(data.publication_year)
+        ? String(
+            data.publication_year
+          )
         : ''
     )
+
     setPages(
       data.pages
         ? String(data.pages)
         : ''
     )
-    setNotes(data.notes ?? '')
-    setLocationId(data.location_id ?? '')
-    setStatus(data.status ?? 'home')
 
-    const { data: locationData } = await supabase
+    setLocationId(
+      data.location_id ?? ''
+    )
+
+    setNotes(
+      data.notes ?? ''
+    )
+
+    const {
+      data: locationData,
+    } = await supabase
       .from('locations')
       .select(`
         id,
@@ -127,9 +175,14 @@ export default function BookPage() {
         location_type,
         parent_id
       `)
-      .eq('family_id', data.family_id)
+      .eq(
+        'family_id',
+        data.family_id
+      )
 
-    setLocations(locationData ?? [])
+    setLocations(
+      locationData ?? []
+    )
 
     setLoading(false)
   }
@@ -138,65 +191,95 @@ export default function BookPage() {
     loadBook()
   }, [params.id])
 
+  async function toggleFavorite() {
+    if (!book) return
+
+    const newValue =
+      !book.favorite
+
+    const { error } =
+      await supabase
+        .from('books')
+        .update({
+          favorite: newValue,
+        })
+        .eq('id', book.id)
+
+    if (!error) {
+      setBook({
+        ...book,
+        favorite: newValue,
+      })
+    }
+  }
+
   async function saveChanges() {
     if (!book) return
 
     setSaving(true)
     setError('')
 
-    const authorList = authors
-      .split(',')
-      .map((author) => author.trim())
-      .filter(Boolean)
+    const authorsArray =
+      authors
+        .split(',')
+        .map(
+          (item) =>
+            item.trim()
+        )
+        .filter(Boolean)
 
-    const parsedYear =
-      publicationYear.trim()
-        ? Number(publicationYear)
-        : null
+    const { error } =
+      await supabase
+        .from('books')
+        .update({
+          title:
+            title.trim() ||
+            book.title,
 
-    const parsedPages =
-      pages.trim()
-        ? Number(pages)
-        : null
+          subtitle:
+            subtitle.trim() ||
+            null,
 
-    const { error: updateError } = await supabase
-      .from('books')
-      .update({
-        title: title.trim() || book.title,
-        subtitle: subtitle.trim() || null,
-        authors: authorList,
-        publisher: publisher.trim() || null,
+          authors:
+            authorsArray,
 
-        publication_year:
-          Number.isFinite(parsedYear)
-            ? parsedYear
-            : null,
+          publisher:
+            publisher.trim() ||
+            null,
 
-        pages:
-          Number.isFinite(parsedPages)
-            ? parsedPages
-            : null,
+          publication_year:
+            publicationYear
+              ? Number(
+                  publicationYear
+                )
+              : null,
 
-        notes: notes.trim() || null,
+          pages:
+            pages
+              ? Number(pages)
+              : null,
 
-        location_id:
-          locationId || null,
+          location_id:
+            locationId ||
+            null,
 
-        status,
-      })
-      .eq('id', book.id)
+          notes:
+            notes.trim() ||
+            null,
+        })
+        .eq('id', book.id)
 
-    if (updateError) {
+    if (error) {
       setError(
-        `Errore durante il salvataggio: ${updateError.message}`
+        error.message
       )
 
       setSaving(false)
       return
     }
 
-    setSaving(false)
     setEditing(false)
+    setSaving(false)
 
     await loadBook()
   }
@@ -204,52 +287,42 @@ export default function BookPage() {
   async function deleteBook() {
     if (!book) return
 
-    const confirmed = window.confirm(
-      `Vuoi davvero eliminare "${book.title}" dalla biblioteca?\n\nQuesta operazione non può essere annullata.`
-    )
+    const confirmed =
+      window.confirm(
+        `Eliminare "${book.title}" dalla biblioteca?`
+      )
 
     if (!confirmed) return
 
-    setDeleting(true)
-    setError('')
+    const { error } =
+      await supabase
+        .from('books')
+        .delete()
+        .eq('id', book.id)
 
-    const { error: deleteError } = await supabase
-      .from('books')
-      .delete()
-      .eq('id', book.id)
-
-    if (deleteError) {
-      setError(
-        `Errore durante l'eliminazione: ${deleteError.message}`
-      )
-
-      setDeleting(false)
-      return
+    if (!error) {
+      router.push('/')
+      router.refresh()
     }
-
-    router.push('/')
-    router.refresh()
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center">
-        <p>Caricamento...</p>
+      <main className="min-h-screen flex items-center justify-center">
+
+        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+
       </main>
     )
   }
 
-  if (error && !book) {
+  if (!book) {
     return (
-      <main className="min-h-screen bg-[#f6f5f1] p-8">
-        <p className="text-red-600">
-          {error}
-        </p>
+      <main className="p-8">
+        {error}
       </main>
     )
   }
-
-  if (!book) return null
 
   const cover =
     book.custom_cover_url ||
@@ -263,485 +336,451 @@ export default function BookPage() {
 
   const shelves =
     locations.filter(
-      (location) =>
-        location.location_type === 'shelf'
+      (item) =>
+        item.location_type ===
+        'shelf'
     )
 
   return (
-    <main className="min-h-screen bg-[#f6f5f1]">
+    <main className="exl-page">
 
-      <div className="max-w-5xl mx-auto px-5 py-7">
+      <div className="max-w-5xl mx-auto px-5 pt-[calc(16px+env(safe-area-inset-top))] md:pt-8">
 
-        <nav className="flex flex-wrap items-center gap-2 mb-8">
+        <div className="flex items-center justify-between">
 
           <Link
             href="/"
-            className="bg-white border rounded-xl px-4 py-2 text-sm"
+            className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
           >
-            ← Biblioteca
+            <ChevronLeft
+              size={23}
+            />
           </Link>
 
-          <Link
-            href="/add"
-            className="bg-white border rounded-xl px-4 py-2 text-sm"
-          >
-            + Aggiungi
-          </Link>
-
-          <Link
-            href="/locations"
-            className="bg-white border rounded-xl px-4 py-2 text-sm"
-          >
-            Posizioni
-          </Link>
-
-        </nav>
-
-        {error && (
-          <div className="bg-red-50 text-red-700 border border-red-200 rounded-2xl p-4 mb-6">
-            {error}
-          </div>
-        )}
-
-        <div className="grid md:grid-cols-[280px_1fr] gap-10">
-
-          <div>
-
-            <div className="aspect-[2/3] rounded-3xl overflow-hidden border bg-white shadow-sm">
-
-              {cover ? (
-                <img
-                  src={cover}
-                  alt={book.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-[#ebe8df] text-7xl">
-                  📖
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-          <div>
-
-            {!editing ? (
-              <>
-                <p className="text-sm text-gray-500 mb-3">
-                  Scheda del libro
-                </p>
-
-                <h1 className="text-4xl font-bold tracking-tight">
-                  {book.title}
-                </h1>
-
-                {book.subtitle && (
-                  <p className="text-xl text-gray-500 mt-2">
-                    {book.subtitle}
-                  </p>
-                )}
-
-                {book.authors?.length ? (
-                  <p className="text-xl mt-5">
-                    {book.authors.join(', ')}
-                  </p>
-                ) : null}
-
-                <div className="flex flex-wrap gap-2 mt-7">
-
-                  <span className="px-3 py-1 rounded-full bg-white border text-sm">
-
-                    {book.status === 'home' && '✓ A casa'}
-                    {book.status === 'loaned' && 'In prestito'}
-                    {book.status === 'lost' && 'Smarrito'}
-                    {book.status === 'other' && 'Altro'}
-
-                  </span>
-
-                  {book.categories?.slice(0, 3).map(
-                    (category) => (
-                      <span
-                        key={category}
-                        className="px-3 py-1 rounded-full bg-white border text-sm"
-                      >
-                        {category}
-                      </span>
-                    )
-                  )}
-
-                </div>
-
-                <div className="mt-8 bg-white border rounded-3xl p-6">
-
-                  <p className="text-sm text-gray-400">
-                    Posizione
-                  </p>
-
-                  {locationPath ? (
-                    <>
-                      <p className="font-semibold text-lg mt-2">
-                        📍 {locationPath}
-                      </p>
-
-                      <p className="text-sm text-gray-500 mt-2">
-                        Posizione fisica della copia
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-gray-500 mt-2">
-                      Nessuna posizione assegnata
-                    </p>
-                  )}
-
-                </div>
-
-                <div className="mt-6 bg-white border rounded-3xl p-6">
-
-                  <h2 className="text-lg font-semibold mb-5">
-                    Dati bibliografici
-                  </h2>
-
-                  <div className="grid sm:grid-cols-2 gap-x-8 gap-y-5 text-sm">
-
-                    {book.publisher && (
-                      <div>
-                        <p className="text-gray-400">
-                          Editore
-                        </p>
-
-                        <p className="font-medium mt-1">
-                          {book.publisher}
-                        </p>
-                      </div>
-                    )}
-
-                    {book.publication_year && (
-                      <div>
-                        <p className="text-gray-400">
-                          Anno
-                        </p>
-
-                        <p className="font-medium mt-1">
-                          {book.publication_year}
-                        </p>
-                      </div>
-                    )}
-
-                    {book.pages && (
-                      <div>
-                        <p className="text-gray-400">
-                          Pagine
-                        </p>
-
-                        <p className="font-medium mt-1">
-                          {book.pages}
-                        </p>
-                      </div>
-                    )}
-
-                    {book.language && (
-                      <div>
-                        <p className="text-gray-400">
-                          Lingua
-                        </p>
-
-                        <p className="font-medium mt-1">
-                          {book.language}
-                        </p>
-                      </div>
-                    )}
-
-                    {book.isbn_13 && (
-                      <div>
-                        <p className="text-gray-400">
-                          ISBN-13
-                        </p>
-
-                        <p className="font-medium mt-1 break-all">
-                          {book.isbn_13}
-                        </p>
-                      </div>
-                    )}
-
-                    {book.isbn_10 && (
-                      <div>
-                        <p className="text-gray-400">
-                          ISBN-10
-                        </p>
-
-                        <p className="font-medium mt-1 break-all">
-                          {book.isbn_10}
-                        </p>
-                      </div>
-                    )}
-
-                  </div>
-
-                </div>
-
-                {book.notes && (
-                  <div className="mt-6 bg-white border rounded-3xl p-6">
-
-                    <h2 className="text-lg font-semibold mb-3">
-                      Note
-                    </h2>
-
-                    <p className="text-gray-600 whitespace-pre-wrap">
-                      {book.notes}
-                    </p>
-
-                  </div>
-                )}
-
-                {book.description && (
-                  <div className="mt-6 bg-white border rounded-3xl p-6">
-
-                    <h2 className="text-lg font-semibold mb-3">
-                      Descrizione
-                    </h2>
-
-                    <p className="text-gray-600 leading-relaxed">
-                      {book.description}
-                    </p>
-
-                  </div>
-                )}
-
-                <div className="grid sm:grid-cols-2 gap-3 mt-8">
-
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="bg-black text-white rounded-2xl py-4 font-semibold"
-                  >
-                    Modifica libro
-                  </button>
-
-                  <button
-                    onClick={deleteBook}
-                    disabled={deleting}
-                    className="bg-white border border-red-200 text-red-600 rounded-2xl py-4 font-semibold disabled:opacity-50"
-                  >
-                    {deleting
-                      ? 'Eliminazione...'
-                      : 'Elimina dalla biblioteca'}
-                  </button>
-
-                </div>
-
-              </>
-            ) : (
-              <>
-
-                <div className="flex items-center justify-between gap-4 mb-7">
-
-                  <div>
-                    <p className="text-sm text-gray-500">
-                      Modifica
-                    </p>
-
-                    <h1 className="text-3xl font-bold">
-                      Scheda del libro
-                    </h1>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setEditing(false)
-                      loadBook()
-                    }}
-                    className="border bg-white rounded-xl px-4 py-2"
-                  >
-                    Annulla
-                  </button>
-
-                </div>
-
-                <div className="bg-white border rounded-3xl p-6 space-y-5">
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Titolo
-                    </label>
-
-                    <input
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full border rounded-xl px-4 py-3"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Sottotitolo
-                    </label>
-
-                    <input
-                      value={subtitle}
-                      onChange={(e) => setSubtitle(e.target.value)}
-                      className="w-full border rounded-xl px-4 py-3"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Autori
-                    </label>
-
-                    <input
-                      value={authors}
-                      onChange={(e) => setAuthors(e.target.value)}
-                      placeholder="Separa più autori con una virgola"
-                      className="w-full border rounded-xl px-4 py-3"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Editore
-                    </label>
-
-                    <input
-                      value={publisher}
-                      onChange={(e) => setPublisher(e.target.value)}
-                      className="w-full border rounded-xl px-4 py-3"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Anno
-                      </label>
-
-                      <input
-                        type="number"
-                        value={publicationYear}
-                        onChange={(e) =>
-                          setPublicationYear(e.target.value)
-                        }
-                        className="w-full border rounded-xl px-4 py-3"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Pagine
-                      </label>
-
-                      <input
-                        type="number"
-                        value={pages}
-                        onChange={(e) =>
-                          setPages(e.target.value)
-                        }
-                        className="w-full border rounded-xl px-4 py-3"
-                      />
-                    </div>
-
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Posizione
-                    </label>
-
-                    <select
-                      value={locationId}
-                      onChange={(e) =>
-                        setLocationId(e.target.value)
-                      }
-                      className="w-full border rounded-xl px-4 py-3 bg-white"
-                    >
-
-                      <option value="">
-                        Nessuna posizione
-                      </option>
-
-                      {shelves.map((location) => (
-                        <option
-                          key={location.id}
-                          value={location.id}
-                        >
-                          {buildLocationPath(
-                            location.id,
-                            locations
-                          )}
-                        </option>
-                      ))}
-
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Stato
-                    </label>
-
-                    <select
-                      value={status}
-                      onChange={(e) =>
-                        setStatus(e.target.value)
-                      }
-                      className="w-full border rounded-xl px-4 py-3 bg-white"
-                    >
-                      <option value="home">
-                        A casa
-                      </option>
-
-                      <option value="loaned">
-                        In prestito
-                      </option>
-
-                      <option value="lost">
-                        Smarrito
-                      </option>
-
-                      <option value="other">
-                        Altro
-                      </option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Note
-                    </label>
-
-                    <textarea
-                      value={notes}
-                      onChange={(e) =>
-                        setNotes(e.target.value)
-                      }
-                      rows={5}
-                      className="w-full border rounded-xl px-4 py-3 resize-none"
-                      placeholder="Annotazioni sulla tua copia..."
-                    />
-                  </div>
-
-                  <button
-                    onClick={saveChanges}
-                    disabled={saving}
-                    className="w-full bg-black text-white rounded-2xl py-4 font-semibold disabled:opacity-50"
-                  >
-                    {saving
-                      ? 'Salvataggio...'
-                      : 'Salva modifiche'}
-                  </button>
-
-                </div>
-
-              </>
-            )}
+          <div className="flex gap-2">
+
+            <button
+              onClick={
+                toggleFavorite
+              }
+              className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
+            >
+              <Heart
+                size={20}
+                fill={
+                  book.favorite
+                    ? 'currentColor'
+                    : 'none'
+                }
+              />
+            </button>
+
+            <button
+              onClick={() =>
+                setEditing(true)
+              }
+              className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
+            >
+              <MoreHorizontal
+                size={22}
+              />
+            </button>
 
           </div>
 
         </div>
 
+        {!editing ? (
+          <>
+
+            <section className="mt-8 grid md:grid-cols-[260px_1fr] gap-8 md:gap-12">
+
+              <div className="max-w-[230px] md:max-w-none mx-auto w-full">
+
+                <div className="aspect-[2/3] rounded-[22px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
+
+                  {cover ? (
+                    <img
+                      src={cover}
+                      alt={book.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <BookOpen
+                        size={55}
+                        strokeWidth={1.2}
+                        className="text-white"
+                      />
+                    </div>
+                  )}
+
+                </div>
+
+              </div>
+
+              <div className="text-center md:text-left">
+
+                <h1 className="text-[32px] md:text-[42px] leading-[1.05] font-bold tracking-[-0.045em]">
+                  {book.title}
+                </h1>
+
+                {book.subtitle && (
+                  <p className="text-[#8e8e93] text-lg mt-3">
+                    {book.subtitle}
+                  </p>
+                )}
+
+                {book.authors?.length ? (
+                  <p className="text-[18px] mt-5">
+                    {book.authors.join(', ')}
+                  </p>
+                ) : null}
+
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start mt-6">
+
+                  <span className="exl-glass rounded-full px-3 py-1.5 text-sm">
+
+                    {book.status === 'home'
+                      ? 'A casa'
+                      : book.status ===
+                          'loaned'
+                        ? 'In prestito'
+                        : book.status}
+
+                  </span>
+
+                  {book.publication_year && (
+                    <span className="exl-glass rounded-full px-3 py-1.5 text-sm">
+                      {book.publication_year}
+                    </span>
+                  )}
+
+                </div>
+
+                {locationPath && (
+                  <div className="exl-glass exl-card p-5 mt-7 text-left">
+
+                    <p className="text-[#8e8e93] text-xs uppercase tracking-wider">
+                      Posizione
+                    </p>
+
+                    <p className="mt-2 font-medium flex items-start gap-2">
+
+                      <MapPin
+                        size={18}
+                        className="mt-0.5 shrink-0"
+                      />
+
+                      {locationPath}
+
+                    </p>
+
+                  </div>
+                )}
+
+              </div>
+
+            </section>
+
+            <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-9">
+
+              <InfoCard
+                label="Editore"
+                value={book.publisher}
+              />
+
+              <InfoCard
+                label="Pagine"
+                value={
+                  book.pages
+                    ? String(
+                        book.pages
+                      )
+                    : null
+                }
+              />
+
+              <InfoCard
+                label="Lingua"
+                value={book.language}
+              />
+
+              <InfoCard
+                label="ISBN"
+                value={
+                  book.isbn_13 ||
+                  book.isbn_10
+                }
+              />
+
+            </section>
+
+            {book.description && (
+              <section className="exl-glass exl-card p-6 mt-5">
+
+                <h2 className="font-bold text-lg">
+                  Descrizione
+                </h2>
+
+                <p className="text-[#636366] leading-relaxed mt-3">
+                  {book.description}
+                </p>
+
+              </section>
+            )}
+
+            {book.notes && (
+              <section className="exl-glass exl-card p-6 mt-4">
+
+                <h2 className="font-bold text-lg">
+                  Note
+                </h2>
+
+                <p className="text-[#636366] whitespace-pre-wrap mt-3">
+                  {book.notes}
+                </p>
+
+              </section>
+            )}
+
+          </>
+        ) : (
+          <section className="exl-glass exl-card p-5 md:p-7 mt-7 max-w-3xl mx-auto">
+
+            <div className="flex items-center justify-between mb-6">
+
+              <div>
+
+                <p className="text-[#8e8e93] text-sm">
+                  Modifica
+                </p>
+
+                <h1 className="text-2xl font-bold">
+                  Scheda libro
+                </h1>
+
+              </div>
+
+              <button
+                onClick={() =>
+                  setEditing(false)
+                }
+                className="text-[#087f75] font-medium"
+              >
+                Fine
+              </button>
+
+            </div>
+
+            <div className="space-y-3">
+
+              <Field
+                label="Titolo"
+                value={title}
+                onChange={
+                  setTitle
+                }
+              />
+
+              <Field
+                label="Sottotitolo"
+                value={subtitle}
+                onChange={
+                  setSubtitle
+                }
+              />
+
+              <Field
+                label="Autori"
+                value={authors}
+                onChange={
+                  setAuthors
+                }
+              />
+
+              <Field
+                label="Editore"
+                value={publisher}
+                onChange={
+                  setPublisher
+                }
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+
+                <Field
+                  label="Anno"
+                  value={
+                    publicationYear
+                  }
+                  onChange={
+                    setPublicationYear
+                  }
+                  type="number"
+                />
+
+                <Field
+                  label="Pagine"
+                  value={pages}
+                  onChange={
+                    setPages
+                  }
+                  type="number"
+                />
+
+              </div>
+
+              <div>
+
+                <label className="text-xs text-[#8e8e93] ml-2">
+                  Posizione
+                </label>
+
+                <select
+                  value={locationId}
+                  onChange={(e) =>
+                    setLocationId(
+                      e.target.value
+                    )
+                  }
+                  className="w-full bg-white/70 rounded-2xl px-4 py-4 mt-1 outline-none"
+                >
+
+                  <option value="">
+                    Nessuna posizione
+                  </option>
+
+                  {shelves.map(
+                    (shelf) => (
+                      <option
+                        key={shelf.id}
+                        value={shelf.id}
+                      >
+                        {buildLocationPath(
+                          shelf.id,
+                          locations
+                        )}
+                      </option>
+                    )
+                  )}
+
+                </select>
+
+              </div>
+
+              <div>
+
+                <label className="text-xs text-[#8e8e93] ml-2">
+                  Note
+                </label>
+
+                <textarea
+                  value={notes}
+                  onChange={(e) =>
+                    setNotes(
+                      e.target.value
+                    )
+                  }
+                  rows={5}
+                  className="w-full bg-white/70 rounded-2xl px-4 py-4 mt-1 outline-none resize-none"
+                />
+
+              </div>
+
+            </div>
+
+            {error && (
+              <p className="text-red-500 text-sm mt-4">
+                {error}
+              </p>
+            )}
+
+            <button
+              onClick={saveChanges}
+              disabled={saving}
+              className="w-full bg-black text-white rounded-2xl py-4 font-semibold mt-5 exl-press"
+            >
+              {saving
+                ? 'Salvataggio…'
+                : 'Salva modifiche'}
+            </button>
+
+            <button
+              onClick={deleteBook}
+              className="w-full text-red-500 py-4 mt-3 flex items-center justify-center gap-2"
+            >
+              <Trash2
+                size={18}
+              />
+
+              Elimina libro
+            </button>
+
+          </section>
+        )}
+
       </div>
 
     </main>
+  )
+}
+
+function InfoCard({
+  label,
+  value,
+}: {
+  label: string
+  value: string | null
+}) {
+  if (!value) return null
+
+  return (
+    <div className="exl-glass exl-card p-4">
+
+      <p className="text-[#8e8e93] text-xs">
+        {label}
+      </p>
+
+      <p className="font-semibold mt-1 break-words">
+        {value}
+      </p>
+
+    </div>
+  )
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+}: {
+  label: string
+  value: string
+  onChange: (
+    value: string
+  ) => void
+  type?: string
+}) {
+  return (
+    <div>
+
+      <label className="text-xs text-[#8e8e93] ml-2">
+        {label}
+      </label>
+
+      <input
+        type={type}
+        value={value}
+        onChange={(e) =>
+          onChange(
+            e.target.value
+          )
+        }
+        className="w-full bg-white/70 rounded-2xl px-4 py-4 mt-1 outline-none"
+      />
+
+    </div>
   )
 }

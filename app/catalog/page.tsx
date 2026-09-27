@@ -1,9 +1,25 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
 import Link from 'next/link'
 
+import {
+  Search,
+  SlidersHorizontal,
+  Grid2X2,
+  List,
+  BookOpen,
+  MapPin,
+  X,
+} from 'lucide-react'
+
 import { createClient } from '@/utils/supabase/client'
+
 import {
   buildLocationPath,
   LocationItem,
@@ -12,6 +28,7 @@ import {
 type Book = {
   id: string
   title: string
+  subtitle: string | null
   authors: string[] | null
   publisher: string | null
   publication_year: number | null
@@ -33,18 +50,35 @@ type SortMode =
 export default function CatalogPage() {
   const supabase = createClient()
 
-  const [books, setBooks] = useState<Book[]>([])
+  const [books, setBooks] =
+    useState<Book[]>([])
+
   const [locations, setLocations] =
     useState<LocationItem[]>([])
 
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const [location, setLocation] = useState('all')
+  const [search, setSearch] =
+    useState('')
+
+  const [status, setStatus] =
+    useState('all')
+
+  const [location, setLocation] =
+    useState('all')
+
   const [sort, setSort] =
     useState<SortMode>('recent')
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [view, setView] =
+    useState<'grid' | 'list'>('grid')
+
+  const [showFilters, setShowFilters] =
+    useState(false)
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [error, setError] =
+    useState('')
 
   useEffect(() => {
     async function loadCatalog() {
@@ -78,6 +112,7 @@ export default function CatalogPage() {
             .select(`
               id,
               title,
+              subtitle,
               authors,
               publisher,
               publication_year,
@@ -88,7 +123,10 @@ export default function CatalogPage() {
               status,
               created_at
             `)
-            .eq('family_id', membership.family_id),
+            .eq(
+              'family_id',
+              membership.family_id
+            ),
 
           supabase
             .from('locations')
@@ -98,179 +136,259 @@ export default function CatalogPage() {
               location_type,
               parent_id
             `)
-            .eq('family_id', membership.family_id),
+            .eq(
+              'family_id',
+              membership.family_id
+            ),
         ])
 
       if (booksResult.error) {
-        setError('Errore nel caricamento del catalogo.')
+        setError(
+          'Errore nel caricamento del catalogo.'
+        )
+
         setLoading(false)
         return
       }
 
-      setBooks(booksResult.data ?? [])
-      setLocations(locationsResult.data ?? [])
+      setBooks(
+        booksResult.data ?? []
+      )
+
+      setLocations(
+        locationsResult.data ?? []
+      )
+
       setLoading(false)
     }
 
     loadCatalog()
   }, [])
 
-  const shelfLocations = locations.filter(
-    (item) => item.location_type === 'shelf'
-  )
+  const shelves =
+    locations.filter(
+      (item) =>
+        item.location_type === 'shelf'
+    )
 
-  const visibleBooks = useMemo(() => {
-    const query = search.trim().toLowerCase()
+  const visibleBooks =
+    useMemo(() => {
+      const query =
+        search.trim().toLowerCase()
 
-    let result = books.filter((book) => {
-      const searchable = [
-        book.title,
-        book.authors?.join(' '),
-        book.publisher,
-        book.isbn_13,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
+      let result = books.filter(
+        (book) => {
+          const searchable = [
+            book.title,
+            book.subtitle,
+            book.authors?.join(' '),
+            book.publisher,
+            book.isbn_13,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
 
-      if (
-        query &&
-        !searchable.includes(query)
-      ) {
-        return false
-      }
+          if (
+            query &&
+            !searchable.includes(query)
+          ) {
+            return false
+          }
 
-      if (
-        status !== 'all' &&
-        book.status !== status
-      ) {
-        return false
-      }
+          if (
+            status !== 'all' &&
+            book.status !== status
+          ) {
+            return false
+          }
 
-      if (
-        location !== 'all' &&
-        book.location_id !== location
-      ) {
-        return false
-      }
+          if (
+            location !== 'all' &&
+            book.location_id !== location
+          ) {
+            return false
+          }
 
-      return true
-    })
-
-    result = [...result].sort((a, b) => {
-      if (sort === 'title') {
-        return a.title.localeCompare(
-          b.title,
-          'it'
-        )
-      }
-
-      if (sort === 'author') {
-        const authorA =
-          a.authors?.[0] ?? ''
-
-        const authorB =
-          b.authors?.[0] ?? ''
-
-        return authorA.localeCompare(
-          authorB,
-          'it'
-        )
-      }
-
-      if (sort === 'year_desc') {
-        return (
-          (b.publication_year ?? 0) -
-          (a.publication_year ?? 0)
-        )
-      }
-
-      if (sort === 'year_asc') {
-        return (
-          (a.publication_year ?? 9999) -
-          (b.publication_year ?? 9999)
-        )
-      }
-
-      return (
-        new Date(b.created_at).getTime() -
-        new Date(a.created_at).getTime()
+          return true
+        }
       )
-    })
 
-    return result
-  }, [
-    books,
-    search,
-    status,
-    location,
-    sort,
-  ])
+      result = [...result].sort(
+        (a, b) => {
+          if (sort === 'title') {
+            return a.title.localeCompare(
+              b.title,
+              'it'
+            )
+          }
+
+          if (sort === 'author') {
+            return (
+              a.authors?.[0] ?? ''
+            ).localeCompare(
+              b.authors?.[0] ?? '',
+              'it'
+            )
+          }
+
+          if (sort === 'year_desc') {
+            return (
+              (b.publication_year ?? 0) -
+              (a.publication_year ?? 0)
+            )
+          }
+
+          if (sort === 'year_asc') {
+            return (
+              (a.publication_year ?? 9999) -
+              (b.publication_year ?? 9999)
+            )
+          }
+
+          return (
+            new Date(
+              b.created_at
+            ).getTime() -
+            new Date(
+              a.created_at
+            ).getTime()
+          )
+        }
+      )
+
+      return result
+    }, [
+      books,
+      search,
+      status,
+      location,
+      sort,
+    ])
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center">
-        Caricamento...
+      <main className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f5f1]">
+    <main className="exl-page">
 
-      <div className="max-w-6xl mx-auto px-5 py-7">
+      <div className="max-w-6xl mx-auto px-5 pt-[calc(20px+env(safe-area-inset-top))] md:pt-10">
 
-        <div className="mb-8">
+        <header className="mb-7">
 
-          <p className="text-sm text-gray-500">
-            La nostra biblioteca
+          <p className="text-[#8e8e93] text-sm">
+            Ex Libris
           </p>
 
-          <h1 className="text-4xl font-bold tracking-tight">
+          <h1 className="text-[38px] leading-none font-bold tracking-[-0.045em] mt-1">
             Catalogo
           </h1>
 
-          <p className="text-gray-500 mt-2">
+          <p className="text-[#8e8e93] mt-2">
             {visibleBooks.length === 1
               ? '1 libro'
               : `${visibleBooks.length} libri`}
           </p>
 
-        </div>
+        </header>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-4 mb-5">
-            {error}
-          </div>
-        )}
+        <section className="exl-glass exl-card p-3">
 
-        <section className="bg-white border rounded-3xl p-5 mb-7">
+          <div className="flex items-center gap-3">
 
-          <div className="relative">
-
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-              ⌕
-            </span>
+            <Search
+              size={20}
+              className="text-[#8e8e93] ml-2 shrink-0"
+            />
 
             <input
               value={search}
               onChange={(e) =>
                 setSearch(e.target.value)
               }
-              placeholder="Titolo, autore, editore o ISBN..."
-              className="w-full bg-gray-50 rounded-2xl pl-11 pr-4 py-4 outline-none"
+              placeholder="Titolo, autore, editore o ISBN"
+              className="flex-1 bg-transparent outline-none py-2 min-w-0"
             />
+
+            {search && (
+              <button
+                onClick={() =>
+                  setSearch('')
+                }
+                className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
+            )}
 
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-3 mt-4">
+        </section>
+
+        <div className="flex items-center justify-between gap-3 mt-4">
+
+          <button
+            onClick={() =>
+              setShowFilters(
+                !showFilters
+              )
+            }
+            className="exl-glass rounded-full px-4 py-2.5 flex items-center gap-2 text-sm font-medium exl-press"
+          >
+            <SlidersHorizontal
+              size={17}
+            />
+            Filtri
+          </button>
+
+          <div className="exl-glass rounded-full p-1 flex">
+
+            <button
+              onClick={() =>
+                setView('grid')
+              }
+              className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                view === 'grid'
+                  ? 'bg-black text-white'
+                  : ''
+              }`}
+            >
+              <Grid2X2 size={17} />
+            </button>
+
+            <button
+              onClick={() =>
+                setView('list')
+              }
+              className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                view === 'list'
+                  ? 'bg-black text-white'
+                  : ''
+              }`}
+            >
+              <List size={18} />
+            </button>
+
+          </div>
+
+        </div>
+
+        {showFilters && (
+          <section className="exl-glass exl-card p-4 mt-3 grid sm:grid-cols-3 gap-3">
 
             <select
               value={status}
               onChange={(e) =>
-                setStatus(e.target.value)
+                setStatus(
+                  e.target.value
+                )
               }
-              className="border rounded-xl px-3 py-3 bg-white"
+              className="bg-white/65 rounded-2xl px-4 py-3 outline-none"
             >
               <option value="all">
                 Tutti gli stati
@@ -296,15 +414,17 @@ export default function CatalogPage() {
             <select
               value={location}
               onChange={(e) =>
-                setLocation(e.target.value)
+                setLocation(
+                  e.target.value
+                )
               }
-              className="border rounded-xl px-3 py-3 bg-white"
+              className="bg-white/65 rounded-2xl px-4 py-3 outline-none"
             >
               <option value="all">
                 Tutte le posizioni
               </option>
 
-              {shelfLocations.map(
+              {shelves.map(
                 (shelf) => (
                   <option
                     key={shelf.id}
@@ -317,7 +437,6 @@ export default function CatalogPage() {
                   </option>
                 )
               )}
-
             </select>
 
             <select
@@ -327,7 +446,7 @@ export default function CatalogPage() {
                   e.target.value as SortMode
                 )
               }
-              className="border rounded-xl px-3 py-3 bg-white"
+              className="bg-white/65 rounded-2xl px-4 py-3 outline-none"
             >
               <option value="recent">
                 Ultimi aggiunti
@@ -342,92 +461,174 @@ export default function CatalogPage() {
               </option>
 
               <option value="year_desc">
-                Anno: più recenti
+                Anno ↓
               </option>
 
               <option value="year_asc">
-                Anno: meno recenti
+                Anno ↑
               </option>
             </select>
 
-          </div>
+          </section>
+        )}
 
-        </section>
+        {error && (
+          <div className="mt-5 exl-glass exl-card p-4 text-red-500">
+            {error}
+          </div>
+        )}
 
         {visibleBooks.length === 0 ? (
 
-          <div className="bg-white border rounded-3xl p-10 text-center">
+          <div className="exl-glass exl-card p-10 text-center mt-6">
 
-            <div className="text-5xl mb-4">
-              📚
-            </div>
+            <BookOpen
+              size={42}
+              strokeWidth={1.5}
+              className="mx-auto text-[#8e8e93]"
+            />
 
-            <h2 className="text-xl font-semibold">
+            <p className="font-semibold mt-4">
               Nessun libro trovato
-            </h2>
-
-            <p className="text-gray-500 mt-2">
-              Prova a modificare i filtri.
             </p>
+
+            <p className="text-[#8e8e93] text-sm mt-1">
+              Prova a cambiare ricerca o filtri.
+            </p>
+
+          </div>
+
+        ) : view === 'grid' ? (
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-5 gap-y-8 mt-7">
+
+            {visibleBooks.map(
+              (book) => {
+
+                const cover =
+                  book.custom_cover_url ||
+                  book.cover_url
+
+                return (
+                  <Link
+                    key={book.id}
+                    href={`/books/${book.id}`}
+                    className="exl-press"
+                  >
+
+                    <div className="aspect-[2/3] rounded-[18px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
+
+                      {cover ? (
+                        <img
+                          src={cover}
+                          alt={book.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+
+                          <BookOpen
+                            size={36}
+                            strokeWidth={1.4}
+                            className="text-white"
+                          />
+
+                        </div>
+                      )}
+
+                    </div>
+
+                    <h2 className="font-semibold leading-tight mt-3 line-clamp-2">
+                      {book.title}
+                    </h2>
+
+                    {book.authors?.[0] && (
+                      <p className="text-[#8e8e93] text-sm mt-1 truncate">
+                        {book.authors[0]}
+                      </p>
+                    )}
+
+                  </Link>
+                )
+              }
+            )}
 
           </div>
 
         ) : (
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-5 gap-y-8">
+          <div className="exl-glass exl-card overflow-hidden mt-6">
 
-            {visibleBooks.map((book) => {
+            {visibleBooks.map(
+              (book, index) => {
 
-              const cover =
-                book.custom_cover_url ||
-                book.cover_url
+                const cover =
+                  book.custom_cover_url ||
+                  book.cover_url
 
-              return (
-                <Link
-                  key={book.id}
-                  href={`/books/${book.id}`}
-                  className="group"
-                >
+                return (
+                  <Link
+                    key={book.id}
+                    href={`/books/${book.id}`}
+                    className={`flex items-center gap-4 p-4 exl-press ${
+                      index > 0
+                        ? 'border-t border-black/5'
+                        : ''
+                    }`}
+                  >
 
-                  <div className="aspect-[2/3] bg-[#ebe8df] rounded-2xl overflow-hidden border shadow-sm">
+                    <div className="w-14 h-20 rounded-[9px] overflow-hidden bg-[#d1d1d6] shrink-0 shadow-sm">
 
-                    {cover ? (
-                      <img
-                        src={cover}
-                        alt={book.title}
-                        className="w-full h-full object-cover transition duration-200 group-hover:scale-[1.02]"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-5xl">
-                        📖
-                      </div>
-                    )}
-
-                  </div>
-
-                  <h2 className="font-semibold leading-tight mt-3">
-                    {book.title}
-                  </h2>
-
-                  {book.authors?.length ? (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {book.authors.join(', ')}
-                    </p>
-                  ) : null}
-
-                  {book.location_id && (
-                    <p className="text-xs text-gray-400 mt-2 line-clamp-1">
-                      📍{' '}
-                      {buildLocationPath(
-                        book.location_id,
-                        locations
+                      {cover ? (
+                        <img
+                          src={cover}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <BookOpen
+                            size={23}
+                            className="text-white"
+                          />
+                        </div>
                       )}
-                    </p>
-                  )}
 
-                </Link>
-              )
-            })}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+
+                      <p className="font-semibold line-clamp-2">
+                        {book.title}
+                      </p>
+
+                      {book.authors?.length ? (
+                        <p className="text-[#8e8e93] text-sm mt-1 truncate">
+                          {book.authors.join(', ')}
+                        </p>
+                      ) : null}
+
+                      {book.location_id && (
+                        <p className="text-[#8e8e93] text-xs mt-2 flex items-center gap-1 truncate">
+
+                          <MapPin
+                            size={12}
+                          />
+
+                          {buildLocationPath(
+                            book.location_id,
+                            locations
+                          )}
+
+                        </p>
+                      )}
+
+                    </div>
+
+                  </Link>
+                )
+              }
+            )}
 
           </div>
 

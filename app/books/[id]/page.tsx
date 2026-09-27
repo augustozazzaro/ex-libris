@@ -75,6 +75,9 @@ export default function BookPage() {
   const [editing, setEditing] =
     useState(false)
 
+  const [personalFavorite, setPersonalFavorite] =
+    useState(false)
+
   const [loading, setLoading] =
     useState(true)
 
@@ -125,6 +128,23 @@ export default function BookPage() {
     }
 
     setBook(data)
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user) {
+      const { data: personalState } = await supabase
+        .from('user_book_state')
+        .select('favorite')
+        .eq('user_id', user.id)
+        .eq('book_id', data.id)
+        .maybeSingle()
+
+      setPersonalFavorite(
+        personalState?.favorite ?? false
+      )
+    }
 
     setTitle(
       data.title ?? ''
@@ -194,22 +214,33 @@ export default function BookPage() {
   async function toggleFavorite() {
     if (!book) return
 
-    const newValue =
-      !book.favorite
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    const { error } =
-      await supabase
-        .from('books')
-        .update({
+    if (!user) return
+
+    const newValue =
+      !personalFavorite
+
+    const { error } = await supabase
+      .from('user_book_state')
+      .upsert(
+        {
+          user_id: user.id,
+          book_id: book.id,
           favorite: newValue,
-        })
-        .eq('id', book.id)
+        },
+        {
+          onConflict:
+            'user_id,book_id',
+        }
+      )
 
     if (!error) {
-      setBook({
-        ...book,
-        favorite: newValue,
-      })
+      setPersonalFavorite(
+        newValue
+      )
     }
   }
 
@@ -368,7 +399,7 @@ export default function BookPage() {
               <Heart
                 size={20}
                 fill={
-                  book.favorite
+                  personalFavorite
                     ? 'currentColor'
                     : 'none'
                 }

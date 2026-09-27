@@ -164,6 +164,28 @@ export default function Home() {
       return
     }
 
+    const pendingInvite =
+      localStorage.getItem(
+        'exlibris_pending_invite'
+      )
+
+    if (pendingInvite) {
+      const { error: inviteError } =
+        await supabase.rpc(
+          'accept_family_invite',
+          {
+            p_code:
+              pendingInvite,
+          }
+        )
+
+      if (!inviteError) {
+        localStorage.removeItem(
+          'exlibris_pending_invite'
+        )
+      }
+    }
+
     await loadLibrary()
   }
 
@@ -322,6 +344,13 @@ function AuthenticatedHome({
               Accedi
             </button>
 
+            <Link
+              href="/join"
+              className="block text-center text-[#087f75] font-medium py-2"
+            >
+              Hai ricevuto un invito? Crea il tuo account
+            </Link>
+
           </form>
 
         </div>
@@ -373,16 +402,16 @@ function AuthenticatedHome({
 
           </div>
 
-          <button
-            onClick={logout}
+          <Link
+            href="/family"
             className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
-            aria-label="Impostazioni"
+            aria-label="Famiglia e impostazioni"
           >
             <Settings
               size={20}
               strokeWidth={2}
             />
-          </button>
+          </Link>
 
         </header>
 

@@ -13,11 +13,11 @@ import {
   ChevronRight,
   Heart,
   Search,
-  Settings,
   ArrowUpRight,
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import ProfileButton from '@/components/ProfileButton'
 
 type Book = {
   id: string
@@ -242,7 +242,7 @@ export default function Home() {
 
             <Link
               href="/join"
-              className="block text-center text-[#53677D] font-medium py-2"
+              className="block text-center text-[#5E7FA3] font-medium py-2"
             >
               Hai ricevuto un invito? Crea il tuo account
             </Link>
@@ -284,15 +284,7 @@ export default function Home() {
 
           </div>
 
-          <Link
-            href="/settings"
-            className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
-          >
-            <Settings
-              size={20}
-              strokeWidth={2}
-            />
-          </Link>
+          <ProfileButton />
 
         </header>
 
@@ -318,7 +310,7 @@ export default function Home() {
             href="/catalog"
             className="col-span-2 min-h-[165px] rounded-[28px] p-5 text-white flex flex-col justify-between exl-press shadow-sm"
             style={{
-              backgroundColor: '#53677D',
+              backgroundColor: '#5E7FA3',
             }}
           >
 
@@ -353,7 +345,7 @@ export default function Home() {
             href="/favorites"
             className="min-h-[135px] rounded-[25px] p-4 text-white flex flex-col justify-between exl-press shadow-sm"
             style={{
-              backgroundColor: '#C9A24D',
+              backgroundColor: '#DDB342',
             }}
           >
 
@@ -380,7 +372,7 @@ export default function Home() {
             href="/loans"
             className="min-h-[135px] rounded-[25px] p-4 text-white flex flex-col justify-between exl-press shadow-sm"
             style={{
-              backgroundColor: '#A85F51',
+              backgroundColor: '#C76955',
             }}
           >
 
@@ -415,7 +407,7 @@ export default function Home() {
 
             <Link
               href="/catalog"
-              className="text-[15px] text-[#53677D] font-medium flex items-center"
+              className="text-[15px] text-[#5E7FA3] font-medium flex items-center"
             >
               Tutti
               <ChevronRight size={17} />

@@ -10,13 +10,11 @@ import Link from 'next/link'
 
 import {
   BookOpen,
-  Map,
-  ArrowUpRight,
+  ChevronRight,
   Heart,
   Search,
-  ScanBarcode,
-  ChevronRight,
   Settings,
+  ArrowUpRight,
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
@@ -27,7 +25,6 @@ type Book = {
   authors: string[] | null
   cover_url: string | null
   custom_cover_url: string | null
-  favorite: boolean
   status: string
 }
 
@@ -37,17 +34,14 @@ export default function Home() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  const [books, setBooks] =
-    useState<Book[]>([])
+  const [books, setBooks] = useState<Book[]>([])
+  const [favoriteCount, setFavoriteCount] = useState(0)
 
-  const [locationCount, setLocationCount] =
-    useState(0)
+  const [authenticated, setAuthenticated] =
+    useState<boolean | null>(null)
 
-  const [loading, setLoading] =
-    useState(true)
-
-  const [error, setError] =
-    useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   async function loadLibrary() {
     setLoading(true)
@@ -58,10 +52,14 @@ export default function Home() {
     } = await supabase.auth.getUser()
 
     if (!user) {
+      setAuthenticated(false)
       setBooks([])
+      setFavoriteCount(0)
       setLoading(false)
       return
     }
+
+    setAuthenticated(true)
 
     const { data: membership } =
       await supabase
@@ -72,65 +70,52 @@ export default function Home() {
 
     if (!membership) {
       setError(
-        'Non riesco a trovare la tua biblioteca.'
+        'Non riesco a trovare la biblioteca associata al tuo account.'
       )
-
       setLoading(false)
       return
     }
 
-    const [booksResult, locationResult] =
-      await Promise.all([
-        supabase
-          .from('books')
-          .select(`
-            id,
-            title,
-            authors,
-            cover_url,
-            custom_cover_url,
-            favorite,
-            status
-          `)
-          .eq(
-            'family_id',
-            membership.family_id
-          )
-          .order(
-            'created_at',
-            { ascending: false }
-          ),
+    const [
+      booksResult,
+      favoriteResult,
+    ] = await Promise.all([
+      supabase
+        .from('books')
+        .select(`
+          id,
+          title,
+          authors,
+          cover_url,
+          custom_cover_url,
+          status
+        `)
+        .eq('family_id', membership.family_id)
+        .order('created_at', {
+          ascending: false,
+        }),
 
-        supabase
-          .from('locations')
-          .select(
-            '*',
-            {
-              count: 'exact',
-              head: true,
-            }
-          )
-          .eq(
-            'family_id',
-            membership.family_id
-          ),
-      ])
+      supabase
+        .from('user_book_state')
+        .select('book_id', {
+          count: 'exact',
+          head: true,
+        })
+        .eq('user_id', user.id)
+        .eq('favorite', true),
+    ])
 
     if (booksResult.error) {
       setError(
-        'Errore durante il caricamento.'
+        'Errore durante il caricamento della biblioteca.'
       )
-
       setLoading(false)
       return
     }
 
-    setBooks(
-      booksResult.data ?? []
-    )
-
-    setLocationCount(
-      locationResult.count ?? 0
+    setBooks(booksResult.data ?? [])
+    setFavoriteCount(
+      favoriteResult.count ?? 0
     )
 
     setLoading(false)
@@ -148,18 +133,16 @@ export default function Home() {
     setLoading(true)
     setError('')
 
-    const { error } =
-      await supabase.auth
-        .signInWithPassword({
-          email,
-          password,
-        })
+    const { error: loginError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
+    if (loginError) {
       setError(
         'Email o password non corrette.'
       )
-
       setLoading(false)
       return
     }
@@ -174,8 +157,7 @@ export default function Home() {
         await supabase.rpc(
           'accept_family_invite',
           {
-            p_code:
-              pendingInvite,
+            p_code: pendingInvite,
           }
         )
 
@@ -189,93 +171,7 @@ export default function Home() {
     await loadLibrary()
   }
 
-  if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center">
-
-        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
-
-      </main>
-    )
-  }
-
-  if (
-    books.length === 0 &&
-    error === '' &&
-    !email
-  ) {
-    const sessionCheck = async () => {}
-  }
-
-  if (!books.length) {
-    // Se non ci sono libri dobbiamo distinguere
-    // tra utente autenticato e non autenticato.
-  }
-
-  return (
-    <AuthenticatedHome
-      books={books}
-      locationCount={locationCount}
-      error={error}
-      email={email}
-      password={password}
-      setEmail={setEmail}
-      setPassword={setPassword}
-      handleLogin={handleLogin}
-      supabase={supabase}
-      reload={loadLibrary}
-    />
-  )
-}
-
-function AuthenticatedHome({
-  books,
-  locationCount,
-  error,
-  email,
-  password,
-  setEmail,
-  setPassword,
-  handleLogin,
-  supabase,
-  reload,
-}: {
-  books: Book[]
-  locationCount: number
-  error: string
-
-  email: string
-  password: string
-
-  setEmail: (value: string) => void
-  setPassword: (value: string) => void
-
-  handleLogin: (
-    event: FormEvent
-  ) => Promise<void>
-
-  supabase: ReturnType<
-    typeof createClient
-  >
-
-  reload: () => Promise<void>
-}) {
-  const [authenticated, setAuthenticated] =
-    useState<boolean | null>(null)
-
-  useEffect(() => {
-    async function check() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      setAuthenticated(!!user)
-    }
-
-    check()
-  }, [])
-
-  if (authenticated === null) {
+  if (loading || authenticated === null) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
@@ -346,7 +242,7 @@ function AuthenticatedHome({
 
             <Link
               href="/join"
-              className="block text-center text-[#087f75] font-medium py-2"
+              className="block text-center text-[#53677D] font-medium py-2"
             >
               Hai ricevuto un invito? Crea il tuo account
             </Link>
@@ -359,27 +255,13 @@ function AuthenticatedHome({
     )
   }
 
-  const totalBooks =
-    books.length
-
-  const loanedBooks =
+  const loanedCount =
     books.filter(
-      (book) =>
-        book.status === 'loaned'
-    ).length
-
-  const favoriteBooks =
-    books.filter(
-      (book) => book.favorite
+      (book) => book.status === 'loaned'
     ).length
 
   const recentBooks =
     books.slice(0, 8)
-
-  async function logout() {
-    await supabase.auth.signOut()
-    window.location.reload()
-  }
 
   return (
     <main className="exl-page">
@@ -395,17 +277,16 @@ function AuthenticatedHome({
             </h1>
 
             <p className="text-[#8e8e93] mt-2">
-              {totalBooks === 1
+              {books.length === 1
                 ? '1 libro'
-                : `${totalBooks} libri`}
+                : `${books.length} libri`}
             </p>
 
           </div>
 
           <Link
-            href="/family"
+            href="/settings"
             className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
-            aria-label="Famiglia e impostazioni"
           >
             <Settings
               size={20}
@@ -433,37 +314,94 @@ function AuthenticatedHome({
 
         <section className="grid grid-cols-2 gap-3 mt-5">
 
-          <DashboardCard
+          <Link
             href="/catalog"
-            icon={BookOpen}
-            value={totalBooks}
-            label="Libri"
-            color="#087f75"
-          />
+            className="col-span-2 min-h-[165px] rounded-[28px] p-5 text-white flex flex-col justify-between exl-press shadow-sm"
+            style={{
+              backgroundColor: '#53677D',
+            }}
+          >
 
-          <DashboardCard
-            href="/locations"
-            icon={Map}
-            value={locationCount}
-            label="Posizioni"
-            color="#ff9f0a"
-          />
+            <div className="flex justify-between items-start">
 
-          <DashboardCard
+              <BookOpen
+                size={29}
+                strokeWidth={1.9}
+              />
+
+              <span className="text-[34px] leading-none font-bold tracking-[-0.04em]">
+                {books.length}
+              </span>
+
+            </div>
+
+            <div>
+
+              <p className="text-[25px] font-bold tracking-[-0.03em]">
+                Biblioteca
+              </p>
+
+              <p className="text-white/70 text-sm mt-1">
+                Tutti i tuoi libri
+              </p>
+
+            </div>
+
+          </Link>
+
+          <Link
+            href="/favorites"
+            className="min-h-[135px] rounded-[25px] p-4 text-white flex flex-col justify-between exl-press shadow-sm"
+            style={{
+              backgroundColor: '#C9A24D',
+            }}
+          >
+
+            <div className="flex justify-between items-start">
+
+              <Heart
+                size={24}
+                strokeWidth={2}
+              />
+
+              <span className="text-[27px] leading-none font-bold">
+                {favoriteCount}
+              </span>
+
+            </div>
+
+            <p className="text-[17px] font-semibold">
+              Preferiti
+            </p>
+
+          </Link>
+
+          <Link
             href="/loans"
-            icon={ArrowUpRight}
-            value={loanedBooks}
-            label="Prestiti"
-            color="#0a84ff"
-          />
+            className="min-h-[135px] rounded-[25px] p-4 text-white flex flex-col justify-between exl-press shadow-sm"
+            style={{
+              backgroundColor: '#A85F51',
+            }}
+          >
 
-          <DashboardCard
-            href="/catalog"
-            icon={Heart}
-            value={favoriteBooks}
-            label="Preferiti"
-            color="#ff453a"
-          />
+            <div className="flex justify-between items-start">
+
+              <ArrowUpRight
+                size={25}
+                strokeWidth={2}
+              />
+
+              <span className="text-[27px] leading-none font-bold">
+                {loanedCount}
+              </span>
+
+            </div>
+
+            <p className="text-[17px] font-semibold">
+              Prestiti
+            </p>
+
+          </Link>
 
         </section>
 
@@ -477,177 +415,71 @@ function AuthenticatedHome({
 
             <Link
               href="/catalog"
-              className="text-[15px] text-[#087f75] font-medium flex items-center"
+              className="text-[15px] text-[#53677D] font-medium flex items-center"
             >
               Tutti
-
-              <ChevronRight
-                size={17}
-              />
+              <ChevronRight size={17} />
             </Link>
 
           </div>
 
-          {recentBooks.length ? (
+          <div className="flex gap-4 overflow-x-auto exl-scrollbar-none -mx-5 px-5 pb-4">
 
-            <div className="flex gap-4 overflow-x-auto exl-scrollbar-none -mx-5 px-5 pb-4">
+            {recentBooks.map((book) => {
 
-              {recentBooks.map(
-                (book) => {
+              const cover =
+                book.custom_cover_url ||
+                book.cover_url
 
-                  const cover =
-                    book.custom_cover_url ||
-                    book.cover_url
+              return (
+                <Link
+                  href={`/books/${book.id}`}
+                  key={book.id}
+                  className="w-[128px] shrink-0 exl-press"
+                >
 
-                  return (
-                    <Link
-                      href={`/books/${book.id}`}
-                      key={book.id}
-                      className="w-[128px] shrink-0 exl-press"
-                    >
+                  <div className="aspect-[2/3] rounded-[16px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
 
-                      <div className="aspect-[2/3] rounded-[16px] overflow-hidden bg-white exl-book-cover">
+                    {cover ? (
+                      <img
+                        src={cover}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
 
-                        {cover ? (
-                          <img
-                            src={cover}
-                            alt={book.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-[#d1d1d6] flex items-center justify-center">
-
-                            <BookOpen
-                              size={34}
-                              strokeWidth={1.4}
-                              className="text-white"
-                            />
-
-                          </div>
-                        )}
+                        <BookOpen
+                          size={34}
+                          strokeWidth={1.4}
+                          className="text-white"
+                        />
 
                       </div>
+                    )}
 
-                      <p className="font-semibold text-[14px] leading-tight mt-3 line-clamp-2">
-                        {book.title}
-                      </p>
+                  </div>
 
-                      {book.authors?.[0] && (
-                        <p className="text-[#8e8e93] text-[12px] mt-1 truncate">
-                          {book.authors[0]}
-                        </p>
-                      )}
+                  <p className="font-semibold text-[14px] leading-tight mt-3 line-clamp-2">
+                    {book.title}
+                  </p>
 
-                    </Link>
-                  )
-                }
-              )}
+                  {book.authors?.[0] && (
+                    <p className="text-[#8e8e93] text-[12px] mt-1 truncate">
+                      {book.authors[0]}
+                    </p>
+                  )}
 
-            </div>
-
-          ) : (
-
-            <div className="exl-glass exl-card p-7">
-
-              <p className="font-semibold">
-                La biblioteca è vuota
-              </p>
-
-              <p className="text-[#8e8e93] text-sm mt-1">
-                Inizia scansionando il primo libro.
-              </p>
-
-            </div>
-
-          )}
-
-        </section>
-
-        <Link
-          href="/add"
-          className="hidden md:flex exl-glass exl-card mt-7 p-5 items-center justify-between exl-press"
-        >
-
-          <div className="flex items-center gap-4">
-
-            <div className="w-12 h-12 bg-black text-white rounded-[16px] flex items-center justify-center">
-
-              <ScanBarcode
-                size={25}
-              />
-
-            </div>
-
-            <div>
-
-              <p className="font-semibold">
-                Aggiungi un libro
-              </p>
-
-              <p className="text-[#8e8e93] text-sm mt-0.5">
-                Scansiona il codice ISBN
-              </p>
-
-            </div>
+                </Link>
+              )
+            })}
 
           </div>
 
-          <ChevronRight
-            className="text-[#8e8e93]"
-          />
-
-        </Link>
+        </section>
 
       </div>
 
     </main>
-  )
-}
-
-function DashboardCard({
-  href,
-  icon: Icon,
-  value,
-  label,
-  color,
-}: {
-  href: string
-
-  icon: React.ComponentType<{
-    size?: number
-    strokeWidth?: number
-  }>
-
-  value: number
-  label: string
-  color: string
-}) {
-  return (
-    <Link
-      href={href}
-      className="rounded-[24px] min-h-[132px] p-4 text-white flex flex-col justify-between shadow-sm exl-press"
-      style={{
-        backgroundColor: color,
-      }}
-    >
-
-      <div className="flex justify-between items-start">
-
-        <Icon
-          size={25}
-          strokeWidth={2}
-        />
-
-        <span className="text-[26px] leading-none font-bold tracking-[-0.04em]">
-          {value}
-        </span>
-
-      </div>
-
-      <p className="text-[17px] font-semibold">
-        {label}
-      </p>
-
-    </Link>
   )
 }

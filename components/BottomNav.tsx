@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import {
-  Library,
+  House,
   Search,
-  Map,
+  Settings,
   ArrowUpRight,
   ScanBarcode,
 } from 'lucide-react'
@@ -14,37 +14,26 @@ import {
 export default function BottomNav() {
   const pathname = usePathname()
 
-  const isActive = (path: string) => {
-    if (path === '/') return pathname === '/'
-    return pathname.startsWith(path)
+  const isActive = (
+    path: string
+  ) => {
+    if (path === '/') {
+      return pathname === '/'
+    }
+
+    return pathname.startsWith(
+      path
+    )
   }
 
-  const navItem = (
-    path: string,
-    label: string,
-    Icon: React.ComponentType<{
-      size?: number
-      strokeWidth?: number
-    }>
-  ) => (
-    <Link
-      href={path}
-      className={`flex flex-col items-center justify-center gap-1 min-w-0 exl-press ${
-        isActive(path)
-          ? 'text-black'
-          : 'text-[#8e8e93]'
-      }`}
-    >
-      <Icon
-        size={22}
-        strokeWidth={isActive(path) ? 2.4 : 2}
-      />
-
-      <span className="text-[10px] font-medium truncate">
-        {label}
-      </span>
-    </Link>
-  )
+  const itemClass = (
+    path: string
+  ) =>
+    `flex flex-col items-center justify-center gap-1 min-w-0 exl-press ${
+      isActive(path)
+        ? 'text-black'
+        : 'text-[#8e8e93]'
+    }`
 
   return (
     <nav className="fixed left-0 right-0 bottom-0 z-50 md:hidden pointer-events-none">
@@ -55,44 +44,89 @@ export default function BottomNav() {
 
           <div className="grid grid-cols-5 items-center">
 
-            {navItem(
-              '/',
-              'Biblioteca',
-              Library
-            )}
+            <Link
+              href="/"
+              className={
+                itemClass('/')
+              }
+            >
+              <House
+                size={22}
+                strokeWidth={
+                  isActive('/')
+                    ? 2.4
+                    : 2
+                }
+              />
 
-            {navItem(
-              '/catalog',
-              'Cerca',
-              Search
-            )}
+              <span className="text-[10px] font-medium">
+                Home
+              </span>
+            </Link>
+
+            <Link
+              href="/catalog"
+              className={
+                itemClass(
+                  '/catalog'
+                )
+              }
+            >
+              <Search
+                size={22}
+              />
+
+              <span className="text-[10px] font-medium">
+                Cerca
+              </span>
+            </Link>
 
             <div className="flex justify-center relative">
 
               <Link
                 href="/add"
-                aria-label="Scansiona ISBN"
                 className="w-[58px] h-[58px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_10px_24px_rgba(0,0,0,0.22)] exl-press -mt-7"
               >
                 <ScanBarcode
                   size={27}
-                  strokeWidth={2}
                 />
               </Link>
 
             </div>
 
-            {navItem(
-              '/locations',
-              'Posizioni',
-              Map
-            )}
+            <Link
+              href="/loans"
+              className={
+                itemClass(
+                  '/loans'
+                )
+              }
+            >
+              <ArrowUpRight
+                size={22}
+              />
 
-            {navItem(
-              '/loans',
-              'Prestiti',
-              ArrowUpRight
-            )}
+              <span className="text-[10px] font-medium">
+                Prestiti
+              </span>
+            </Link>
+
+            <Link
+              href="/settings"
+              className={
+                itemClass(
+                  '/settings'
+                )
+              }
+            >
+              <Settings
+                size={22}
+              />
+
+              <span className="text-[10px] font-medium">
+                Impostazioni
+              </span>
+            </Link>
 
           </div>
 

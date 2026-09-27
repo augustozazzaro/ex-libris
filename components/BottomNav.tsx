@@ -3,75 +3,103 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import {
+  Library,
+  Search,
+  Map,
+  ArrowUpRight,
+  ScanBarcode,
+} from 'lucide-react'
+
 export default function BottomNav() {
   const pathname = usePathname()
 
-  function active(path: string) {
+  const isActive = (path: string) => {
     if (path === '/') return pathname === '/'
     return pathname.startsWith(path)
   }
 
-  const itemClass = (path: string) =>
-    `flex flex-col items-center justify-center gap-1 min-w-14 text-[11px] ${
-      active(path)
-        ? 'text-black font-semibold'
-        : 'text-gray-400'
-    }`
+  const navItem = (
+    path: string,
+    label: string,
+    Icon: React.ComponentType<{
+      size?: number
+      strokeWidth?: number
+    }>
+  ) => (
+    <Link
+      href={path}
+      className={`flex flex-col items-center justify-center gap-1 min-w-0 exl-press ${
+        isActive(path)
+          ? 'text-black'
+          : 'text-[#8e8e93]'
+      }`}
+    >
+      <Icon
+        size={22}
+        strokeWidth={isActive(path) ? 2.4 : 2}
+      />
+
+      <span className="text-[10px] font-medium truncate">
+        {label}
+      </span>
+    </Link>
+  )
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden">
-      <div className="mx-auto max-w-lg bg-white/95 backdrop-blur-xl border-t border-gray-200 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+    <nav className="fixed left-0 right-0 bottom-0 z-50 md:hidden pointer-events-none">
 
-        <div className="grid grid-cols-5 items-end">
+      <div className="px-3 pb-[calc(10px+env(safe-area-inset-bottom))]">
 
-          <Link
-            href="/"
-            className={itemClass('/')}
-          >
-            <span className="text-xl">▦</span>
-            <span>Biblioteca</span>
-          </Link>
+        <div className="exl-glass-strong rounded-[28px] max-w-[520px] mx-auto px-3 py-2.5 pointer-events-auto">
 
-          <Link
-            href="/catalog"
-            className={itemClass('/catalog')}
-          >
-            <span className="text-xl">⌕</span>
-            <span>Cerca</span>
-          </Link>
+          <div className="grid grid-cols-5 items-center">
 
-          <Link
-            href="/add"
-            className="flex flex-col items-center justify-center -mt-5"
-          >
-            <span className="w-14 h-14 bg-black text-white rounded-full flex items-center justify-center text-3xl shadow-lg">
-              +
-            </span>
+            {navItem(
+              '/',
+              'Biblioteca',
+              Library
+            )}
 
-            <span className="text-[11px] font-semibold mt-1">
-              Aggiungi
-            </span>
-          </Link>
+            {navItem(
+              '/catalog',
+              'Cerca',
+              Search
+            )}
 
-          <Link
-            href="/locations"
-            className={itemClass('/locations')}
-          >
-            <span className="text-xl">⌂</span>
-            <span>Posizioni</span>
-          </Link>
+            <div className="flex justify-center relative">
 
-          <Link
-            href="/loans"
-            className={itemClass('/loans')}
-          >
-            <span className="text-xl">↗</span>
-            <span>Prestiti</span>
-          </Link>
+              <Link
+                href="/add"
+                aria-label="Scansiona ISBN"
+                className="w-[58px] h-[58px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_10px_24px_rgba(0,0,0,0.22)] exl-press -mt-7"
+              >
+                <ScanBarcode
+                  size={27}
+                  strokeWidth={2}
+                />
+              </Link>
+
+            </div>
+
+            {navItem(
+              '/locations',
+              'Posizioni',
+              Map
+            )}
+
+            {navItem(
+              '/loans',
+              'Prestiti',
+              ArrowUpRight
+            )}
+
+          </div>
 
         </div>
 
       </div>
+
     </nav>
   )
 }

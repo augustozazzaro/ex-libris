@@ -1,17 +1,34 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from 'react'
+
 import Link from 'next/link'
+
+import {
+  BookOpen,
+  Map,
+  ArrowUpRight,
+  Heart,
+  Search,
+  ScanBarcode,
+  ChevronRight,
+  Settings,
+} from 'lucide-react'
+
 import { createClient } from '@/utils/supabase/client'
 
 type Book = {
   id: string
   title: string
-  subtitle: string | null
   authors: string[] | null
   cover_url: string | null
-  publication_year: number | null
-  publisher: string | null
+  custom_cover_url: string | null
+  favorite: boolean
+  status: string
 }
 
 export default function Home() {
@@ -20,16 +37,17 @@ export default function Home() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [books, setBooks] =
+    useState<Book[]>([])
 
-  const [familyName, setFamilyName] = useState('')
-  const [role, setRole] = useState('')
-  const [bookCount, setBookCount] = useState(0)
+  const [locationCount, setLocationCount] =
+    useState(0)
 
-  
-const [books, setBooks] = useState<Book[]>([])
-const [search, setSearch] = useState('')
+  const [loading, setLoading] =
+    useState(true)
+
+  const [error, setError] =
+    useState('')
 
   async function loadLibrary() {
     setLoading(true)
@@ -40,67 +58,80 @@ const [search, setSearch] = useState('')
     } = await supabase.auth.getUser()
 
     if (!user) {
-      setFamilyName('')
       setBooks([])
       setLoading(false)
       return
     }
 
-    const { data: membership, error: membershipError } =
+    const { data: membership } =
       await supabase
         .from('family_members')
-        .select('family_id, role')
+        .select('family_id')
         .eq('user_id', user.id)
         .single()
 
-    if (membershipError || !membership) {
+    if (!membership) {
       setError(
-        'Non riesco a trovare la biblioteca associata a questo utente.'
+        'Non riesco a trovare la tua biblioteca.'
       )
+
       setLoading(false)
       return
     }
 
-    const { data: family, error: familyError } =
-      await supabase
-        .from('families')
-        .select('name')
-        .eq('id', membership.family_id)
-        .single()
+    const [booksResult, locationResult] =
+      await Promise.all([
+        supabase
+          .from('books')
+          .select(`
+            id,
+            title,
+            authors,
+            cover_url,
+            custom_cover_url,
+            favorite,
+            status
+          `)
+          .eq(
+            'family_id',
+            membership.family_id
+          )
+          .order(
+            'created_at',
+            { ascending: false }
+          ),
 
-    if (familyError || !family) {
-      setError('Non riesco a leggere i dati della biblioteca.')
+        supabase
+          .from('locations')
+          .select(
+            '*',
+            {
+              count: 'exact',
+              head: true,
+            }
+          )
+          .eq(
+            'family_id',
+            membership.family_id
+          ),
+      ])
+
+    if (booksResult.error) {
+      setError(
+        'Errore durante il caricamento.'
+      )
+
       setLoading(false)
       return
     }
 
-    const { data: booksData, error: booksError } =
-      await supabase
-        .from('books')
-        .select(`
-          id,
-          title,
-          subtitle,
-          authors,
-          cover_url,
-          publication_year,
-          publisher
-        `)
-        .eq('family_id', membership.family_id)
-        .order('created_at', {
-          ascending: false,
-        })
+    setBooks(
+      booksResult.data ?? []
+    )
 
-    if (booksError) {
-      setError('Errore durante il caricamento dei libri.')
-      setLoading(false)
-      return
-    }
-
-    setFamilyName(family.name)
-    setRole(membership.role)
-    setBooks(booksData ?? [])
-    setBookCount(booksData?.length ?? 0)
+    setLocationCount(
+      locationResult.count ?? 0
+    )
 
     setLoading(false)
   }
@@ -109,20 +140,26 @@ const [search, setSearch] = useState('')
     loadLibrary()
   }, [])
 
-  async function handleLogin(e: FormEvent) {
-    e.preventDefault()
+  async function handleLogin(
+    event: FormEvent
+  ) {
+    event.preventDefault()
 
     setLoading(true)
     setError('')
 
-    const { error: loginError } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+    const { error } =
+      await supabase.auth
+        .signInWithPassword({
+          email,
+          password,
+        })
 
-    if (loginError) {
-      setError('Email o password non corrette.')
+    if (error) {
+      setError(
+        'Email o password non corrette.'
+      )
+
       setLoading(false)
       return
     }
@@ -130,277 +167,458 @@ const [search, setSearch] = useState('')
     await loadLibrary()
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-
-    setFamilyName('')
-    setRole('')
-    setBooks([])
-    setBookCount(0)
-  }
-
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-lg">Caricamento...</p>
+      <main className="min-h-screen flex items-center justify-center">
+
+        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+
       </main>
     )
   }
 
-  if (!familyName) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white rounded-3xl border p-8 shadow-sm">
-          <div className="text-center mb-8">
-            <div className="text-5xl mb-4">📚</div>
+  if (
+    books.length === 0 &&
+    error === '' &&
+    !email
+  ) {
+    const sessionCheck = async () => {}
+  }
 
-            <h1 className="text-3xl font-bold">
-              La nostra biblioteca
+  if (!books.length) {
+    // Se non ci sono libri dobbiamo distinguere
+    // tra utente autenticato e non autenticato.
+  }
+
+  return (
+    <AuthenticatedHome
+      books={books}
+      locationCount={locationCount}
+      error={error}
+      email={email}
+      password={password}
+      setEmail={setEmail}
+      setPassword={setPassword}
+      handleLogin={handleLogin}
+      supabase={supabase}
+      reload={loadLibrary}
+    />
+  )
+}
+
+function AuthenticatedHome({
+  books,
+  locationCount,
+  error,
+  email,
+  password,
+  setEmail,
+  setPassword,
+  handleLogin,
+  supabase,
+  reload,
+}: {
+  books: Book[]
+  locationCount: number
+  error: string
+
+  email: string
+  password: string
+
+  setEmail: (value: string) => void
+  setPassword: (value: string) => void
+
+  handleLogin: (
+    event: FormEvent
+  ) => Promise<void>
+
+  supabase: ReturnType<
+    typeof createClient
+  >
+
+  reload: () => Promise<void>
+}) {
+  const [authenticated, setAuthenticated] =
+    useState<boolean | null>(null)
+
+  useEffect(() => {
+    async function check() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      setAuthenticated(!!user)
+    }
+
+    check()
+  }, [])
+
+  if (authenticated === null) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+      </main>
+    )
+  }
+
+  if (!authenticated) {
+    return (
+      <main className="min-h-screen px-5 flex items-center justify-center">
+
+        <div className="w-full max-w-sm">
+
+          <div className="text-center mb-10">
+
+            <div className="w-20 h-20 rounded-[24px] bg-black text-white mx-auto flex items-center justify-center shadow-xl mb-6">
+              <BookOpen
+                size={38}
+                strokeWidth={1.8}
+              />
+            </div>
+
+            <h1 className="text-[42px] leading-none font-bold tracking-[-0.04em]">
+              Ex Libris
             </h1>
 
-            <p className="text-gray-500 mt-2">
-              Accedi alla biblioteca di famiglia
-            </p>
           </div>
 
           <form
             onSubmit={handleLogin}
-            className="space-y-4"
+            className="exl-glass exl-card p-5 space-y-3"
           >
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Email
-              </label>
 
-              <input
-                type="email"
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                required
-                className="w-full border rounded-xl px-4 py-3"
-              />
-            </div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
+              placeholder="Email"
+              className="w-full bg-white/65 rounded-2xl px-4 py-4 outline-none"
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Password
-              </label>
-
-              <input
-                type="password"
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                required
-                className="w-full border rounded-xl px-4 py-3"
-              />
-            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+              placeholder="Password"
+              className="w-full bg-white/65 rounded-2xl px-4 py-4 outline-none"
+              required
+            />
 
             {error && (
-              <p className="text-red-600 text-sm">
+              <p className="text-red-500 text-sm px-1">
                 {error}
               </p>
             )}
 
             <button
               type="submit"
-              className="w-full bg-black text-white rounded-xl py-3 font-medium"
+              className="w-full bg-black text-white rounded-2xl py-4 font-semibold exl-press"
             >
               Accedi
             </button>
+
           </form>
+
         </div>
+
       </main>
     )
   }
 
-const filteredBooks = books.filter((book) => {
-  const query = search.trim().toLowerCase()
+  const totalBooks =
+    books.length
 
-  if (!query) return true
+  const loanedBooks =
+    books.filter(
+      (book) =>
+        book.status === 'loaned'
+    ).length
 
-  const title = book.title?.toLowerCase() ?? ''
-  const subtitle = book.subtitle?.toLowerCase() ?? ''
-  const authors = book.authors?.join(' ').toLowerCase() ?? ''
-  const publisher = book.publisher?.toLowerCase() ?? ''
+  const favoriteBooks =
+    books.filter(
+      (book) => book.favorite
+    ).length
+
+  const recentBooks =
+    books.slice(0, 8)
+
+  async function logout() {
+    await supabase.auth.signOut()
+    window.location.reload()
+  }
 
   return (
-    title.includes(query) ||
-    subtitle.includes(query) ||
-    authors.includes(query) ||
-    publisher.includes(query)
-  )
-})  
-return (
-    <main className="min-h-screen bg-[#f6f5f1]">
+    <main className="exl-page">
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-5 pt-[calc(20px+env(safe-area-inset-top))] md:pt-10">
 
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10">
+        <header className="flex items-start justify-between gap-4">
 
           <div>
-            <p className="text-sm text-gray-500">
-              Biblioteca di famiglia
-            </p>
 
-            <h1 className="text-4xl font-bold tracking-tight">
-              {familyName}
+            <h1 className="text-[38px] sm:text-[46px] leading-none font-bold tracking-[-0.045em]">
+              Ex Libris
             </h1>
 
-            <p className="text-gray-500 mt-2">
-              {bookCount === 1
+            <p className="text-[#8e8e93] mt-2">
+              {totalBooks === 1
                 ? '1 libro'
-                : `${bookCount} libri`}
+                : `${totalBooks} libri`}
             </p>
-          </div>
-
-          <div className="flex gap-3">
-
-            <Link
-              href="/add"
-              className="bg-black text-white rounded-xl px-5 py-3 font-medium"
-            >
-              + Aggiungi libro
-            </Link>
-
-            <button
-              onClick={handleLogout}
-              className="border rounded-xl px-4 py-3 bg-white"
-            >
-              Esci
-            </button>
 
           </div>
+
+          <button
+            onClick={logout}
+            className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
+            aria-label="Impostazioni"
+          >
+            <Settings
+              size={20}
+              strokeWidth={2}
+            />
+          </button>
 
         </header>
 
-        <section className="mb-10">
-          <div className="bg-white border rounded-3xl p-5">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cerca titolo o autore..."
-              className="w-full text-lg outline-none"
-            />
-          </div>
+        <Link
+          href="/catalog"
+          className="exl-glass exl-card mt-7 flex items-center gap-3 px-4 py-4 exl-press"
+        >
+
+          <Search
+            size={20}
+            className="text-[#8e8e93]"
+          />
+
+          <span className="text-[#8e8e93]">
+            Cerca nella biblioteca
+          </span>
+
+        </Link>
+
+        <section className="grid grid-cols-2 gap-3 mt-5">
+
+          <DashboardCard
+            href="/catalog"
+            icon={BookOpen}
+            value={totalBooks}
+            label="Libri"
+            color="#087f75"
+          />
+
+          <DashboardCard
+            href="/locations"
+            icon={Map}
+            value={locationCount}
+            label="Posizioni"
+            color="#ff9f0a"
+          />
+
+          <DashboardCard
+            href="/loans"
+            icon={ArrowUpRight}
+            value={loanedBooks}
+            label="Prestiti"
+            color="#0a84ff"
+          />
+
+          <DashboardCard
+            href="/catalog"
+            icon={Heart}
+            value={favoriteBooks}
+            label="Preferiti"
+            color="#ff453a"
+          />
+
         </section>
 
-        {books.length === 0 ? (
+        <section className="mt-9">
 
-          <section className="bg-white border rounded-3xl p-10 text-center">
+          <div className="flex items-center justify-between mb-4">
 
-            <div className="text-6xl mb-5">
-              📚
-            </div>
-
-            <h2 className="text-2xl font-semibold">
-              La biblioteca è ancora vuota
+            <h2 className="text-[22px] font-bold tracking-[-0.025em]">
+              Ultimi aggiunti
             </h2>
 
-            <p className="text-gray-500 mt-2 mb-6">
-              Aggiungi il tuo primo libro.
-            </p>
-
             <Link
-              href="/add"
-              className="inline-block bg-black text-white rounded-xl px-6 py-3 font-medium"
+              href="/catalog"
+              className="text-[15px] text-[#087f75] font-medium flex items-center"
             >
-              Aggiungi libro
+              Tutti
+
+              <ChevronRight
+                size={17}
+              />
             </Link>
 
-          </section>
+          </div>
 
-        ) : (
+          {recentBooks.length ? (
 
-          <section>
+            <div className="flex gap-4 overflow-x-auto exl-scrollbar-none -mx-5 px-5 pb-4">
 
-            <div className="flex items-end justify-between mb-5">
+              {recentBooks.map(
+                (book) => {
 
-              <div>
-                <p className="text-sm text-gray-500">
-                  Catalogo
-                </p>
+                  const cover =
+                    book.custom_cover_url ||
+                    book.cover_url
 
-                <h2 className="text-2xl font-bold">
-                  I tuoi libri
-                </h2>
-              </div>
+                  return (
+                    <Link
+                      href={`/books/${book.id}`}
+                      key={book.id}
+                      className="w-[128px] shrink-0 exl-press"
+                    >
 
-            </div>
+                      <div className="aspect-[2/3] rounded-[16px] overflow-hidden bg-white exl-book-cover">
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        {cover ? (
+                          <img
+                            src={cover}
+                            alt={book.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-[#d1d1d6] flex items-center justify-center">
 
-              {filteredBooks.map((book) => (
+                            <BookOpen
+                              size={34}
+                              strokeWidth={1.4}
+                              className="text-white"
+                            />
 
-                <Link
-                  key={book.id}
-                  href={`/books/${book.id}`}
-                  className="group"
-                >
+                          </div>
+                        )}
 
-                  <div className="aspect-[2/3] bg-white rounded-2xl border overflow-hidden shadow-sm">
-
-                    {book.cover_url ? (
-
-                      <img
-                        src={book.cover_url}
-                        alt={book.title}
-                        className="w-full h-full object-cover group-hover:scale-[1.02] transition"
-                      />
-
-                    ) : (
-
-                      <div className="w-full h-full flex items-center justify-center bg-[#ebe8df] text-5xl">
-                        📖
                       </div>
 
-                    )}
+                      <p className="font-semibold text-[14px] leading-tight mt-3 line-clamp-2">
+                        {book.title}
+                      </p>
 
-                  </div>
-
-                  <div className="mt-3">
-
-                    <h3 className="font-semibold leading-tight">
-                      {book.title}
-                    </h3>
-
-                    {book.authors &&
-                      book.authors.length > 0 && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          {book.authors.join(', ')}
+                      {book.authors?.[0] && (
+                        <p className="text-[#8e8e93] text-[12px] mt-1 truncate">
+                          {book.authors[0]}
                         </p>
                       )}
 
-                    {(book.publisher ||
-                      book.publication_year) && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          {[
-                            book.publisher,
-                            book.publication_year,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                      )}
-
-                  </div>
-
-                </Link>
-
-              ))}
+                    </Link>
+                  )
+                }
+              )}
 
             </div>
 
-          </section>
+          ) : (
 
-        )}
+            <div className="exl-glass exl-card p-7">
+
+              <p className="font-semibold">
+                La biblioteca è vuota
+              </p>
+
+              <p className="text-[#8e8e93] text-sm mt-1">
+                Inizia scansionando il primo libro.
+              </p>
+
+            </div>
+
+          )}
+
+        </section>
+
+        <Link
+          href="/add"
+          className="hidden md:flex exl-glass exl-card mt-7 p-5 items-center justify-between exl-press"
+        >
+
+          <div className="flex items-center gap-4">
+
+            <div className="w-12 h-12 bg-black text-white rounded-[16px] flex items-center justify-center">
+
+              <ScanBarcode
+                size={25}
+              />
+
+            </div>
+
+            <div>
+
+              <p className="font-semibold">
+                Aggiungi un libro
+              </p>
+
+              <p className="text-[#8e8e93] text-sm mt-0.5">
+                Scansiona il codice ISBN
+              </p>
+
+            </div>
+
+          </div>
+
+          <ChevronRight
+            className="text-[#8e8e93]"
+          />
+
+        </Link>
 
       </div>
 
     </main>
+  )
+}
+
+function DashboardCard({
+  href,
+  icon: Icon,
+  value,
+  label,
+  color,
+}: {
+  href: string
+
+  icon: React.ComponentType<{
+    size?: number
+    strokeWidth?: number
+  }>
+
+  value: number
+  label: string
+  color: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-[24px] min-h-[132px] p-4 text-white flex flex-col justify-between shadow-sm exl-press"
+      style={{
+        backgroundColor: color,
+      }}
+    >
+
+      <div className="flex justify-between items-start">
+
+        <Icon
+          size={25}
+          strokeWidth={2}
+        />
+
+        <span className="text-[26px] leading-none font-bold tracking-[-0.04em]">
+          {value}
+        </span>
+
+      </div>
+
+      <p className="text-[17px] font-semibold">
+        {label}
+      </p>
+
+    </Link>
   )
 }

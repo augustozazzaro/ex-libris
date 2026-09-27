@@ -1,69 +1,406 @@
-import Image from "next/image";
+'use client'
+
+import { FormEvent, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
+
+type Book = {
+  id: string
+  title: string
+  subtitle: string | null
+  authors: string[] | null
+  cover_url: string | null
+  publication_year: number | null
+  publisher: string | null
+}
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const supabase = createClient()
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const [familyName, setFamilyName] = useState('')
+  const [role, setRole] = useState('')
+  const [bookCount, setBookCount] = useState(0)
+
+  
+const [books, setBooks] = useState<Book[]>([])
+const [search, setSearch] = useState('')
+
+  async function loadLibrary() {
+    setLoading(true)
+    setError('')
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setFamilyName('')
+      setBooks([])
+      setLoading(false)
+      return
+    }
+
+    const { data: membership, error: membershipError } =
+      await supabase
+        .from('family_members')
+        .select('family_id, role')
+        .eq('user_id', user.id)
+        .single()
+
+    if (membershipError || !membership) {
+      setError(
+        'Non riesco a trovare la biblioteca associata a questo utente.'
+      )
+      setLoading(false)
+      return
+    }
+
+    const { data: family, error: familyError } =
+      await supabase
+        .from('families')
+        .select('name')
+        .eq('id', membership.family_id)
+        .single()
+
+    if (familyError || !family) {
+      setError('Non riesco a leggere i dati della biblioteca.')
+      setLoading(false)
+      return
+    }
+
+    const { data: booksData, error: booksError } =
+      await supabase
+        .from('books')
+        .select(`
+          id,
+          title,
+          subtitle,
+          authors,
+          cover_url,
+          publication_year,
+          publisher
+        `)
+        .eq('family_id', membership.family_id)
+        .order('created_at', {
+          ascending: false,
+        })
+
+    if (booksError) {
+      setError('Errore durante il caricamento dei libri.')
+      setLoading(false)
+      return
+    }
+
+    setFamilyName(family.name)
+    setRole(membership.role)
+    setBooks(booksData ?? [])
+    setBookCount(booksData?.length ?? 0)
+
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    loadLibrary()
+  }, [])
+
+  async function handleLogin(e: FormEvent) {
+    e.preventDefault()
+
+    setLoading(true)
+    setError('')
+
+    const { error: loginError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+    if (loginError) {
+      setError('Email o password non corrette.')
+      setLoading(false)
+      return
+    }
+
+    await loadLibrary()
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+
+    setFamilyName('')
+    setRole('')
+    setBooks([])
+    setBookCount(0)
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-lg">Caricamento...</p>
+      </main>
+    )
+  }
+
+  if (!familyName) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="w-full max-w-md bg-white rounded-3xl border p-8 shadow-sm">
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-4">📚</div>
+
+            <h1 className="text-3xl font-bold">
+              La nostra biblioteca
+            </h1>
+
+            <p className="text-gray-500 mt-2">
+              Accedi alla biblioteca di famiglia
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleLogin}
+            className="space-y-4"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Email
+              </label>
+
+              <input
+                type="email"
+                value={email}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
+                required
+                className="w-full border rounded-xl px-4 py-3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Password
+              </label>
+
+              <input
+                type="password"
+                value={password}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
+                required
+                className="w-full border rounded-xl px-4 py-3"
+              />
+            </div>
+
+            {error && (
+              <p className="text-red-600 text-sm">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-black text-white rounded-xl py-3 font-medium"
+            >
+              Accedi
+            </button>
+          </form>
         </div>
       </main>
-    </div>
-  );
+    )
+  }
+
+const filteredBooks = books.filter((book) => {
+  const query = search.trim().toLowerCase()
+
+  if (!query) return true
+
+  const title = book.title?.toLowerCase() ?? ''
+  const subtitle = book.subtitle?.toLowerCase() ?? ''
+  const authors = book.authors?.join(' ').toLowerCase() ?? ''
+  const publisher = book.publisher?.toLowerCase() ?? ''
+
+  return (
+    title.includes(query) ||
+    subtitle.includes(query) ||
+    authors.includes(query) ||
+    publisher.includes(query)
+  )
+})  
+return (
+    <main className="min-h-screen bg-[#f6f5f1]">
+
+      <div className="max-w-6xl mx-auto px-6 py-8">
+
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10">
+
+          <div>
+            <p className="text-sm text-gray-500">
+              Biblioteca di famiglia
+            </p>
+
+            <h1 className="text-4xl font-bold tracking-tight">
+              {familyName}
+            </h1>
+
+            <p className="text-gray-500 mt-2">
+              {bookCount === 1
+                ? '1 libro'
+                : `${bookCount} libri`}
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+
+            <Link
+              href="/add"
+              className="bg-black text-white rounded-xl px-5 py-3 font-medium"
+            >
+              + Aggiungi libro
+            </Link>
+
+            <button
+              onClick={handleLogout}
+              className="border rounded-xl px-4 py-3 bg-white"
+            >
+              Esci
+            </button>
+
+          </div>
+
+        </header>
+
+        <section className="mb-10">
+          <div className="bg-white border rounded-3xl p-5">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cerca titolo o autore..."
+              className="w-full text-lg outline-none"
+            />
+          </div>
+        </section>
+
+        {books.length === 0 ? (
+
+          <section className="bg-white border rounded-3xl p-10 text-center">
+
+            <div className="text-6xl mb-5">
+              📚
+            </div>
+
+            <h2 className="text-2xl font-semibold">
+              La biblioteca è ancora vuota
+            </h2>
+
+            <p className="text-gray-500 mt-2 mb-6">
+              Aggiungi il tuo primo libro.
+            </p>
+
+            <Link
+              href="/add"
+              className="inline-block bg-black text-white rounded-xl px-6 py-3 font-medium"
+            >
+              Aggiungi libro
+            </Link>
+
+          </section>
+
+        ) : (
+
+          <section>
+
+            <div className="flex items-end justify-between mb-5">
+
+              <div>
+                <p className="text-sm text-gray-500">
+                  Catalogo
+                </p>
+
+                <h2 className="text-2xl font-bold">
+                  I tuoi libri
+                </h2>
+              </div>
+
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+
+              {filteredBooks.map((book) => (
+
+                <Link
+                  key={book.id}
+                  href={`/books/${book.id}`}
+                  className="group"
+                >
+
+                  <div className="aspect-[2/3] bg-white rounded-2xl border overflow-hidden shadow-sm">
+
+                    {book.cover_url ? (
+
+                      <img
+                        src={book.cover_url}
+                        alt={book.title}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition"
+                      />
+
+                    ) : (
+
+                      <div className="w-full h-full flex items-center justify-center bg-[#ebe8df] text-5xl">
+                        📖
+                      </div>
+
+                    )}
+
+                  </div>
+
+                  <div className="mt-3">
+
+                    <h3 className="font-semibold leading-tight">
+                      {book.title}
+                    </h3>
+
+                    {book.authors &&
+                      book.authors.length > 0 && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {book.authors.join(', ')}
+                        </p>
+                      )}
+
+                    {(book.publisher ||
+                      book.publication_year) && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {[
+                            book.publisher,
+                            book.publication_year,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      )}
+
+                  </div>
+
+                </Link>
+
+              ))}
+
+            </div>
+
+          </section>
+
+        )}
+
+      </div>
+
+    </main>
+  )
 }

@@ -1,7 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import {
+  NextRequest,
+  NextResponse,
+} from 'next/server'
 
 type NormalizedBook = {
-  source: 'google_books' | 'open_library'
+  source:
+    | 'google_books'
+    | 'open_library'
+
   sourceId?: string
 
   isbn10: string | null
@@ -25,149 +31,314 @@ type NormalizedBook = {
   cover: string | null
 }
 
-function cleanIsbn(value: string) {
-  return value.replace(/[^0-9Xx]/g, '')
+const OPEN_LIBRARY_HEADERS = {
+  'User-Agent':
+    'ExLibrisFamilyLibrary/1.0',
+}
+
+function cleanIsbn(
+  value: string
+) {
+  return value.replace(
+    /[^0-9Xx]/g,
+    ''
+  )
+}
+
+function isbnCover(
+  isbn: string | null
+) {
+  if (!isbn) return null
+
+  return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`
 }
 
 async function googleSearch(
-  query: string
+  query: string,
+  maxResults = 20
 ): Promise<NormalizedBook[]> {
   try {
-    const response = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20`,
-      { cache: 'no-store' }
-    )
+    const response =
+      await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+          query
+        )}&maxResults=${maxResults}`,
+        {
+          cache:
+            'no-store',
+        }
+      )
 
-    if (!response.ok) return []
+    if (!response.ok) {
+      return []
+    }
 
-    const data = await response.json()
+    const data =
+      await response.json()
 
-    return (data.items ?? []).map((item: any) => {
-      const volume = item.volumeInfo ?? {}
+    return (
+      data.items ?? []
+    ).map(
+      (item: any) => {
+        const volume =
+          item.volumeInfo ??
+          {}
 
-      const identifiers =
-        volume.industryIdentifiers ?? []
+        const identifiers =
+          volume.industryIdentifiers ??
+          []
 
-      const isbn10 =
-        identifiers.find(
-          (x: any) => x.type === 'ISBN_10'
-        )?.identifier ?? null
+        const isbn10 =
+          identifiers.find(
+            (entry: any) =>
+              entry.type ===
+              'ISBN_10'
+          )?.identifier ??
+          null
 
-      const isbn13 =
-        identifiers.find(
-          (x: any) => x.type === 'ISBN_13'
-        )?.identifier ?? null
+        const isbn13 =
+          identifiers.find(
+            (entry: any) =>
+              entry.type ===
+              'ISBN_13'
+          )?.identifier ??
+          null
 
-      const cover =
-        volume.imageLinks?.large ??
-        volume.imageLinks?.medium ??
-        volume.imageLinks?.thumbnail ??
-        volume.imageLinks?.smallThumbnail ??
-        null
+        const googleCover =
+          volume.imageLinks
+            ?.extraLarge ??
+          volume.imageLinks
+            ?.large ??
+          volume.imageLinks
+            ?.medium ??
+          volume.imageLinks
+            ?.thumbnail ??
+          volume.imageLinks
+            ?.smallThumbnail ??
+          null
 
-      return {
-        source: 'google_books' as const,
-        sourceId: item.id,
+        return {
+          source:
+            'google_books' as const,
 
-        isbn10,
-        isbn13,
+          sourceId:
+            item.id,
 
-        title: volume.title ?? '',
-        subtitle: volume.subtitle ?? '',
+          isbn10,
+          isbn13,
 
-        authors: volume.authors ?? [],
+          title:
+            volume.title ??
+            '',
 
-        publisher: volume.publisher ?? '',
-        publicationDate: volume.publishedDate ?? '',
-        edition: '',
+          subtitle:
+            volume.subtitle ??
+            '',
 
-        pages: volume.pageCount ?? null,
-        language: volume.language ?? '',
+          authors:
+            volume.authors ??
+            [],
 
-        categories: volume.categories ?? [],
-        description: volume.description ?? '',
+          publisher:
+            volume.publisher ??
+            '',
 
-        cover: cover
-          ? cover.replace('http://', 'https://')
-          : null,
+          publicationDate:
+            volume.publishedDate ??
+            '',
+
+          edition: '',
+
+          pages:
+            volume.pageCount ??
+            null,
+
+          language:
+            volume.language ??
+            '',
+
+          categories:
+            volume.categories ??
+            [],
+
+          description:
+            volume.description ??
+            '',
+
+          cover:
+            googleCover
+              ? googleCover.replace(
+                  'http://',
+                  'https://'
+                )
+              : isbnCover(
+                  isbn13 ??
+                    isbn10
+                ),
+        }
       }
-    })
+    )
   } catch {
     return []
   }
 }
 
-async function openLibraryIsbn(
+async function openLibraryEditionByIsbn(
   isbn: string
 ): Promise<NormalizedBook[]> {
   try {
-    const response = await fetch(
-      `https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`,
-      { cache: 'no-store' }
-    )
+    const response =
+      await fetch(
+        `https://openlibrary.org/isbn/${encodeURIComponent(
+          isbn
+        )}.json`,
+        {
+          cache:
+            'no-store',
 
-    if (!response.ok) return []
-
-    const book = await response.json()
-
-    let authors: string[] = []
-
-    if (book.authors?.length) {
-      const names = await Promise.all(
-        book.authors.map(async (author: any) => {
-          try {
-            const r = await fetch(
-              `https://openlibrary.org${author.key}.json`,
-              { cache: 'no-store' }
-            )
-
-            if (!r.ok) return null
-
-            const data = await r.json()
-
-            return data.name ?? null
-          } catch {
-            return null
-          }
-        })
+          headers:
+            OPEN_LIBRARY_HEADERS,
+        }
       )
 
-      authors = names.filter(Boolean) as string[]
+    if (!response.ok) {
+      return []
+    }
+
+    const book =
+      await response.json()
+
+    let authors:
+      string[] = []
+
+    if (
+      book.authors?.length
+    ) {
+      const authorResults =
+        await Promise.all(
+          book.authors.map(
+            async (
+              author: {
+                key: string
+              }
+            ) => {
+              try {
+                const result =
+                  await fetch(
+                    `https://openlibrary.org${author.key}.json`,
+                    {
+                      cache:
+                        'no-store',
+
+                      headers:
+                        OPEN_LIBRARY_HEADERS,
+                    }
+                  )
+
+                if (
+                  !result.ok
+                ) {
+                  return null
+                }
+
+                const data =
+                  await result.json()
+
+                return (
+                  data.name ??
+                  null
+                )
+              } catch {
+                return null
+              }
+            }
+          )
+        )
+
+      authors =
+        authorResults.filter(
+          Boolean
+        ) as string[]
+    }
+
+    const isbn13 =
+      book.isbn_13?.[0] ??
+      (isbn.length === 13
+        ? isbn
+        : null)
+
+    const isbn10 =
+      book.isbn_10?.[0] ??
+      (isbn.length === 10
+        ? isbn
+        : null)
+
+    let description = ''
+
+    if (
+      typeof book.description ===
+      'string'
+    ) {
+      description =
+        book.description
+    } else if (
+      book.description?.value
+    ) {
+      description =
+        book.description.value
     }
 
     return [
       {
-        source: 'open_library',
+        source:
+          'open_library',
 
-        isbn10:
-          book.isbn_10?.[0] ??
-          (isbn.length === 10 ? isbn : null),
+        sourceId:
+          book.key,
 
-        isbn13:
-          book.isbn_13?.[0] ??
-          (isbn.length === 13 ? isbn : null),
+        isbn10,
+        isbn13,
 
-        title: book.title ?? '',
-        subtitle: book.subtitle ?? '',
+        title:
+          book.title ??
+          '',
+
+        subtitle:
+          book.subtitle ??
+          '',
 
         authors,
 
-        publisher: book.publishers?.[0] ?? '',
-        publicationDate: book.publish_date ?? '',
-        edition: '',
+        publisher:
+          book.publishers?.[0] ??
+          '',
 
-        pages: book.number_of_pages ?? null,
+        publicationDate:
+          book.publish_date ??
+          '',
+
+        edition:
+          book.edition_name ??
+          '',
+
+        pages:
+          book.number_of_pages ??
+          null,
+
         language: '',
 
-        categories: book.subjects ?? [],
+        categories:
+          book.subjects ??
+          [],
 
-        description:
-          typeof book.description === 'string'
-            ? book.description
-            : book.description?.value ?? '',
+        description,
 
         cover:
-          `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
+          isbnCover(
+            isbn13 ??
+              isbn10 ??
+              isbn
+          ),
       },
     ]
   } catch {
@@ -176,107 +347,238 @@ async function openLibraryIsbn(
 }
 
 async function openLibrarySearch(
-  query: string
+  query: string,
+  limit = 25
 ): Promise<NormalizedBook[]> {
   try {
-    const response = await fetch(
-      `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=20`,
-      { cache: 'no-store' }
-    )
+    const fields = [
+      'key',
+      'title',
+      'subtitle',
+      'author_name',
+      'publisher',
+      'publish_year',
+      'first_publish_year',
+      'isbn',
+      'cover_i',
+      'language',
+      'number_of_pages_median',
+      'edition_key',
+      'edition_count',
+    ].join(',')
 
-    if (!response.ok) return []
+    const response =
+      await fetch(
+        `https://openlibrary.org/search.json?q=${encodeURIComponent(
+          query
+        )}&fields=${encodeURIComponent(
+          fields
+        )}&limit=${limit}`,
+        {
+          cache:
+            'no-store',
 
-    const data = await response.json()
+          headers:
+            OPEN_LIBRARY_HEADERS,
+        }
+      )
 
-    return (data.docs ?? []).map((doc: any) => {
-      const isbnList: string[] = doc.isbn ?? []
+    if (!response.ok) {
+      return []
+    }
 
-      const isbn13 =
-        isbnList.find(
-          (value) => cleanIsbn(value).length === 13
-        ) ?? null
+    const data =
+      await response.json()
 
-      const isbn10 =
-        isbnList.find(
-          (value) => cleanIsbn(value).length === 10
-        ) ?? null
+    return (
+      data.docs ?? []
+    ).map(
+      (doc: any) => {
+        const isbnList:
+          string[] =
+          doc.isbn ?? []
 
-      return {
-        source: 'open_library' as const,
-        sourceId: doc.key,
+        const isbn13 =
+          isbnList.find(
+            (value) =>
+              cleanIsbn(
+                value
+              ).length ===
+              13
+          ) ?? null
 
-        isbn10,
-        isbn13,
+        const isbn10 =
+          isbnList.find(
+            (value) =>
+              cleanIsbn(
+                value
+              ).length ===
+              10
+          ) ?? null
 
-        title: doc.title ?? '',
-        subtitle: doc.subtitle ?? '',
+        const publicationDate =
+          doc.publish_year?.[0]
+            ? String(
+                doc.publish_year[0]
+              )
+            : doc.first_publish_year
+              ? String(
+                  doc.first_publish_year
+                )
+              : ''
 
-        authors: doc.author_name ?? [],
+        return {
+          source:
+            'open_library' as const,
 
-        publisher: doc.publisher?.[0] ?? '',
-        publicationDate:
-          doc.first_publish_year
-            ? String(doc.first_publish_year)
-            : '',
+          sourceId:
+            doc.key,
 
-        edition: '',
+          isbn10,
+          isbn13,
 
-        pages:
-          doc.number_of_pages_median ?? null,
+          title:
+            doc.title ??
+            '',
 
-        language: doc.language?.[0] ?? '',
+          subtitle:
+            doc.subtitle ??
+            '',
 
-        categories:
-          doc.subject?.slice(0, 10) ?? [],
+          authors:
+            doc.author_name ??
+            [],
 
-        description: '',
+          publisher:
+            doc.publisher?.[0] ??
+            '',
 
-        cover: doc.cover_i
-          ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
-          : isbn13
-            ? `https://covers.openlibrary.org/b/isbn/${isbn13}-L.jpg`
-            : null,
+          publicationDate,
+
+          edition:
+            doc.edition_count
+              ? `${doc.edition_count} edizioni catalogate`
+              : '',
+
+          pages:
+            doc.number_of_pages_median ??
+            null,
+
+          language:
+            doc.language?.[0] ??
+            '',
+
+          categories: [],
+
+          description: '',
+
+          cover:
+            doc.cover_i
+              ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg?default=false`
+              : isbnCover(
+                  isbn13 ??
+                    isbn10
+                ),
+        }
       }
-    })
+    )
   } catch {
     return []
   }
 }
 
+function scoreForIsbn(
+  book: NormalizedBook,
+  isbn: string
+) {
+  let score = 0
+
+  if (
+    book.isbn13 === isbn ||
+    book.isbn10 === isbn
+  ) {
+    score += 100
+  }
+
+  if (book.publisher) {
+    score += 8
+  }
+
+  if (
+    book.publicationDate
+  ) {
+    score += 6
+  }
+
+  if (
+    book.authors.length
+  ) {
+    score += 6
+  }
+
+  if (book.cover) {
+    score += 4
+  }
+
+  if (book.pages) {
+    score += 2
+  }
+
+  return score
+}
+
 function deduplicate(
   books: NormalizedBook[]
 ) {
-  const seen = new Set<string>()
+  const seen =
+    new Set<string>()
 
-  return books.filter((book) => {
-    const key =
-      book.isbn13 ||
-      book.isbn10 ||
-      `${book.title}|${book.authors.join(',')}|${book.publisher}|${book.publicationDate}`
+  return books.filter(
+    (book) => {
+      const key =
+        book.isbn13 ||
+        book.isbn10 ||
+        [
+          book.title,
+          book.authors.join(
+            ','
+          ),
+          book.publisher,
+          book.publicationDate,
+        ]
+          .join('|')
+          .toLowerCase()
 
-    const normalized =
-      key.toLowerCase().trim()
+      if (
+        seen.has(key)
+      ) {
+        return false
+      }
 
-    if (seen.has(normalized)) {
-      return false
+      seen.add(key)
+      return true
     }
-
-    seen.add(normalized)
-    return true
-  })
+  )
 }
 
 export async function GET(
   request: NextRequest
 ) {
-  const isbnRaw =
-    request.nextUrl.searchParams.get('isbn')
+  const isbnParam =
+    request.nextUrl.searchParams.get(
+      'isbn'
+    )
 
-  const queryRaw =
-    request.nextUrl.searchParams.get('q')
+  const queryParam =
+    request.nextUrl.searchParams.get(
+      'q'
+    )
 
-  if (isbnRaw) {
-    const isbn = cleanIsbn(isbnRaw)
+  if (isbnParam) {
+    const isbn =
+      cleanIsbn(
+        isbnParam
+      )
 
     if (
       isbn.length !== 10 &&
@@ -286,88 +588,136 @@ export async function GET(
         {
           found: false,
           items: [],
-          error: 'ISBN non valido',
+          error:
+            'ISBN non valido.',
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       )
     }
 
-    const googleExact =
-      await googleSearch(`isbn:${isbn}`)
-
-    if (googleExact.length) {
-      return NextResponse.json({
-        found: true,
-        mode: 'isbn',
-        items: deduplicate(
-          googleExact
-        ),
-      })
-    }
-
-    const openExact =
-      await openLibraryIsbn(isbn)
-
-    if (openExact.length) {
-      return NextResponse.json({
-        found: true,
-        mode: 'isbn',
-        items: openExact,
-      })
-    }
-
     const [
+      googleExact,
+      openEdition,
+      openSearch,
       googleBroad,
-      openBroad,
     ] = await Promise.all([
-      googleSearch(isbn),
-      openLibrarySearch(isbn),
+      googleSearch(
+        `isbn:${isbn}`,
+        10
+      ),
+
+      openLibraryEditionByIsbn(
+        isbn
+      ),
+
+      openLibrarySearch(
+        `isbn:${isbn}`,
+        15
+      ),
+
+      googleSearch(
+        isbn,
+        10
+      ),
     ])
 
-    const combined =
+    const items =
       deduplicate([
+        ...googleExact,
+        ...openEdition,
+        ...openSearch,
         ...googleBroad,
-        ...openBroad,
       ])
+        .sort(
+          (a, b) =>
+            scoreForIsbn(
+              b,
+              isbn
+            ) -
+            scoreForIsbn(
+              a,
+              isbn
+            )
+        )
+        .slice(
+          0,
+          20
+        )
 
-    return NextResponse.json({
-      found: combined.length > 0,
-      mode: 'isbn',
-      items: combined,
-      error:
-        combined.length === 0
-          ? 'ISBN non trovato nei cataloghi disponibili.'
-          : undefined,
-    })
+    return NextResponse.json(
+      {
+        found:
+          items.length > 0,
+
+        mode: 'isbn',
+
+        items,
+
+        exact:
+          items.some(
+            (book) =>
+              book.isbn13 ===
+                isbn ||
+              book.isbn10 ===
+                isbn
+          ),
+
+        error:
+          items.length === 0
+            ? 'ISBN non trovato nei cataloghi disponibili.'
+            : undefined,
+      }
+    )
   }
 
-  if (queryRaw?.trim()) {
+  if (
+    queryParam?.trim()
+  ) {
     const query =
-      queryRaw.trim()
+      queryParam.trim()
 
     const [
       google,
       openLibrary,
     ] = await Promise.all([
-      googleSearch(query),
-      openLibrarySearch(query),
+      googleSearch(
+        query,
+        25
+      ),
+
+      openLibrarySearch(
+        query,
+        30
+      ),
     ])
 
-    const combined =
+    const items =
       deduplicate([
         ...google,
         ...openLibrary,
-      ]).slice(0, 30)
+      ]).slice(
+        0,
+        40
+      )
 
-    return NextResponse.json({
-      found: combined.length > 0,
-      mode: 'search',
-      items: combined,
-      error:
-        combined.length === 0
-          ? 'Nessun risultato.'
-          : undefined,
-    })
+    return NextResponse.json(
+      {
+        found:
+          items.length > 0,
+
+        mode:
+          'search',
+
+        items,
+
+        error:
+          items.length === 0
+            ? 'Nessun risultato.'
+            : undefined,
+      }
+    )
   }
 
   return NextResponse.json(
@@ -375,8 +725,10 @@ export async function GET(
       found: false,
       items: [],
       error:
-        'Inserisci ISBN oppure una ricerca.',
+        'Inserisci un ISBN o una ricerca.',
     },
-    { status: 400 }
+    {
+      status: 400,
+    }
   )
 }

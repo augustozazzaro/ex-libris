@@ -11,9 +11,15 @@ import {
 } from '@zxing/browser'
 
 import {
+  BarcodeFormat,
+  DecodeHintType,
+} from '@zxing/library'
+
+import {
   X,
   ScanBarcode,
   Camera,
+  Zap,
 } from 'lucide-react'
 
 type Props = {
@@ -22,6 +28,81 @@ type Props = {
   ) => void
 
   onClose: () => void
+}
+
+function isValidISBN13(
+  isbn: string
+) {
+  if (!/^\d{13}$/.test(isbn)) {
+    return false
+  }
+
+  const sum = isbn
+    .slice(0, 12)
+    .split('')
+    .reduce(
+      (acc, digit, index) =>
+        acc +
+        Number(digit) *
+          (index % 2 === 0
+            ? 1
+            : 3),
+      0
+    )
+
+  const check =
+    (10 - (sum % 10)) % 10
+
+  return (
+    check ===
+    Number(isbn[12])
+  )
+}
+
+function isValidISBN10(
+  isbn: string
+) {
+  if (
+    !/^\d{9}[\dXx]$/.test(
+      isbn
+    )
+  ) {
+    return false
+  }
+
+  let sum = 0
+
+  for (
+    let index = 0;
+    index < 10;
+    index++
+  ) {
+    const char =
+      isbn[index]
+
+    const value =
+      index === 9 &&
+      /[Xx]/.test(char)
+        ? 10
+        : Number(char)
+
+    sum +=
+      value *
+      (10 - index)
+  }
+
+  return (
+    sum % 11 === 0
+  )
+}
+
+function isValidISBN(
+  value: string
+) {
+  return (
+    isValidISBN13(value) ||
+    isValidISBN10(value)
+  )
 }
 
 export default function IsbnScanner({
@@ -35,7 +116,18 @@ export default function IsbnScanner({
 
   const [message, setMessage] =
     useState(
-      'Avvio della fotocamera…'
+      'Avvio fotocamera…'
+    )
+
+  const [torchAvailable, setTorchAvailable] =
+    useState(false)
+
+  const [torchOn, setTorchOn] =
+    useState(false)
+
+  const trackRef =
+    useRef<MediaStreamTrack | null>(
+      null
     )
 
   useEffect(() => {
@@ -47,57 +139,159 @@ export default function IsbnScanner({
 
     async function start() {
       try {
+        const hints =
+          new Map<
+            DecodeHintType,
+            unknown
+          >()
+
+        hints.set(
+          DecodeHintType.POSSIBLE_FORMATS,
+          [
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.UPC_A,
+          ]
+        )
+
+        hints.set(
+          DecodeHintType.TRY_HARDER,
+          true
+        )
+
         const reader =
-          new BrowserMultiFormatReader()
+          new BrowserMultiFormatReader(
+            hints,
+            {
+              delayBetweenScanAttempts:
+                100,
+              delayBetweenScanSuccess:
+                500,
+            }
+          )
 
         if (!videoRef.current) {
           return
         }
 
+        const constraints:
+          MediaStreamConstraints =
+          {
+            audio: false,
+
+            video: {
+              facingMode: {
+                ideal:
+                  'environment',
+              },
+
+              width: {
+                ideal: 1920,
+              },
+
+              height: {
+                ideal: 1080,
+              },
+
+              frameRate: {
+                ideal: 30,
+              },
+            },
+          }
+
         controls =
-          await reader
-            .decodeFromVideoDevice(
-              undefined,
-              videoRef.current,
-              (result) => {
-                if (
-                  !result ||
-                  stopped
-                ) {
-                  return
-                }
-
-                const raw =
-                  result.getText()
-
-                const cleaned =
-                  raw.replace(
-                    /[^0-9Xx]/g,
-                    ''
-                  )
-
-                if (
-                  cleaned.length === 13 ||
-                  cleaned.length === 10
-                ) {
-                  stopped = true
-                  controls?.stop()
-
-                  onDetected(
-                    cleaned
-                  )
-                }
+          await reader.decodeFromConstraints(
+            constraints,
+            videoRef.current,
+            (
+              result,
+              _error,
+              controlsFromCallback
+            ) => {
+              if (
+                !result ||
+                stopped
+              ) {
+                return
               }
+
+              const raw =
+                result.getText()
+
+              const cleaned =
+                raw.replace(
+                  /[^0-9Xx]/g,
+                  ''
+                )
+
+              if (
+                !isValidISBN(
+                  cleaned
+                )
+              ) {
+                setMessage(
+                  'Codice letto, ma non è un ISBN valido. Continua a inquadrare.'
+                )
+
+                return
+              }
+
+              stopped = true
+
+              controlsFromCallback.stop()
+
+              if (
+                'vibrate' in
+                navigator
+              ) {
+                navigator.vibrate(
+                  80
+                )
+              }
+
+              onDetected(
+                cleaned
+              )
+            }
+          )
+
+        const stream =
+          videoRef.current.srcObject as
+            | MediaStream
+            | null
+
+        const track =
+          stream
+            ?.getVideoTracks()
+            ?.[0]
+
+        if (track) {
+          trackRef.current =
+            track
+
+          const capabilities =
+            track.getCapabilities?.() as
+              | MediaTrackCapabilities
+              | undefined
+
+          if (
+            capabilities &&
+            'torch' in capabilities
+          ) {
+            setTorchAvailable(
+              true
             )
+          }
+        }
 
         setMessage(
-          'Allinea il codice a barre nel riquadro'
+          'Avvicina il barcode al riquadro e tienilo fermo'
         )
       } catch (error) {
         console.error(error)
 
         setMessage(
-          'Non riesco ad accedere alla fotocamera.'
+          'Non riesco ad accedere alla fotocamera. Controlla i permessi.'
         )
       }
     }
@@ -106,9 +300,47 @@ export default function IsbnScanner({
 
     return () => {
       stopped = true
+
       controls?.stop()
+
+      const stream =
+        videoRef.current?.srcObject as
+          | MediaStream
+          | null
+
+      stream
+        ?.getTracks()
+        .forEach((track) =>
+          track.stop()
+        )
     }
   }, [onDetected])
+
+  async function toggleTorch() {
+    const track =
+      trackRef.current
+
+    if (!track) return
+
+    try {
+      await track.applyConstraints({
+        advanced: [
+          {
+            torch:
+              !torchOn,
+          } as MediaTrackConstraintSet,
+        ],
+      })
+
+      setTorchOn(
+        !torchOn
+      )
+    } catch {
+      setTorchAvailable(
+        false
+      )
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[100] bg-black">
@@ -121,14 +353,13 @@ export default function IsbnScanner({
         className="absolute inset-0 w-full h-full object-cover"
       />
 
-      <div className="absolute inset-0 bg-black/18" />
+      <div className="absolute inset-0 bg-black/10" />
 
       <div className="absolute top-0 left-0 right-0 pt-[calc(16px+env(safe-area-inset-top))] px-4 z-10">
 
         <div className="flex items-center justify-between">
 
           <div className="exl-glass rounded-full px-4 py-2.5 text-white flex items-center gap-2">
-
             <Camera
               size={17}
             />
@@ -136,15 +367,44 @@ export default function IsbnScanner({
             <span className="text-sm font-medium">
               Scanner ISBN
             </span>
-
           </div>
 
-          <button
-            onClick={onClose}
-            className="exl-glass w-11 h-11 rounded-full text-white flex items-center justify-center"
-          >
-            <X size={22} />
-          </button>
+          <div className="flex gap-2">
+
+            {torchAvailable && (
+              <button
+                onClick={
+                  toggleTorch
+                }
+                className={`exl-glass w-11 h-11 rounded-full flex items-center justify-center ${
+                  torchOn
+                    ? 'text-yellow-300'
+                    : 'text-white'
+                }`}
+              >
+                <Zap
+                  size={20}
+                  fill={
+                    torchOn
+                      ? 'currentColor'
+                      : 'none'
+                  }
+                />
+              </button>
+            )}
+
+            <button
+              onClick={
+                onClose
+              }
+              className="exl-glass w-11 h-11 rounded-full text-white flex items-center justify-center"
+            >
+              <X
+                size={22}
+              />
+            </button>
+
+          </div>
 
         </div>
 
@@ -152,19 +412,17 @@ export default function IsbnScanner({
 
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
 
-        <div className="relative w-[82%] max-w-[390px] h-[175px]">
+        <div className="relative w-[88%] max-w-[430px] h-[145px]">
 
-          <div className="absolute inset-0 rounded-[26px] border border-white/60 shadow-[0_0_0_9999px_rgba(0,0,0,0.46)]" />
+          <div className="absolute inset-0 rounded-[24px] border border-white/50 shadow-[0_0_0_9999px_rgba(0,0,0,0.40)]" />
 
-          <Corner className="top-0 left-0 border-l-4 border-t-4 rounded-tl-[26px]" />
+          <Corner className="top-0 left-0 border-l-4 border-t-4 rounded-tl-[24px]" />
 
-          <Corner className="top-0 right-0 border-r-4 border-t-4 rounded-tr-[26px]" />
+          <Corner className="top-0 right-0 border-r-4 border-t-4 rounded-tr-[24px]" />
 
-          <Corner className="bottom-0 left-0 border-l-4 border-b-4 rounded-bl-[26px]" />
+          <Corner className="bottom-0 left-0 border-l-4 border-b-4 rounded-bl-[24px]" />
 
-          <Corner className="bottom-0 right-0 border-r-4 border-b-4 rounded-br-[26px]" />
-
-          <div className="absolute left-5 right-5 top-1/2 h-[2px] bg-red-500/90 shadow-[0_0_10px_rgba(255,69,58,0.85)]" />
+          <Corner className="bottom-0 right-0 border-r-4 border-b-4 rounded-br-[24px]" />
 
         </div>
 
@@ -184,7 +442,7 @@ export default function IsbnScanner({
           </p>
 
           <p className="text-white/65 text-xs mt-1">
-            Usa il codice ISBN sul retro del libro
+            Per i libri moderni cerca soprattutto il codice EAN-13 che inizia con 978 o 979
           </p>
 
         </div>

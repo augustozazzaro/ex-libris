@@ -241,6 +241,13 @@ export default function Home() {
             </button>
 
             <Link
+              href="/recover"
+              className="block text-center text-[#8e8e93] text-sm py-1"
+            >
+              Password dimenticata?
+            </Link>
+
+            <Link
               href="/join"
               className="block text-center text-[#5E7FA3] font-medium py-2"
             >

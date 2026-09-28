@@ -465,12 +465,37 @@ export default function ProfilePage() {
           )}
         </section>
 
-        <section className="grid grid-cols-4 gap-2 mt-7">
-          <Stat value={stats.read} label="Letti" icon={BookCheck} />
-          <Stat value={stats.reading} label="In lettura" icon={BookOpen} />
-          <Stat value={stats.toRead} label="Da leggere" icon={Bookmark} />
-          <Stat value={stats.favorites} label="Preferiti" icon={Heart} />
-        </section>
+<section className="grid grid-cols-4 gap-2 mt-7">
+
+  <Stat
+    href="/my-books?filter=read"
+    value={stats.read}
+    label="Letti"
+    icon={BookCheck}
+  />
+
+  <Stat
+    href="/my-books?filter=reading"
+    value={stats.reading}
+    label="In lettura"
+    icon={BookOpen}
+  />
+
+  <Stat
+    href="/my-books?filter=to_read"
+    value={stats.toRead}
+    label="Da leggere"
+    icon={Bookmark}
+  />
+
+  <Stat
+    href="/my-books?filter=favorites"
+    value={stats.favorites}
+    label="Preferiti"
+    icon={Heart}
+  />
+
+</section>
 
         <section className="exl-glass exl-card p-5 mt-5">
           <div className="flex justify-between gap-4">
@@ -781,16 +806,21 @@ export default function ProfilePage() {
 }
 
 function Stat({
+  href,
   value,
   label,
   icon: Icon,
 }: {
+  href: string
   value: number
   label: string
   icon: LucideIcon
 }) {
   return (
-    <div className="exl-glass rounded-[20px] px-1 py-4 text-center">
+    <Link
+      href={href}
+      className="exl-glass rounded-[20px] px-1 py-4 text-center exl-press"
+    >
       <Icon
         size={17}
         className="mx-auto text-[#8e8e93]"
@@ -803,7 +833,7 @@ function Stat({
       <p className="text-[#8e8e93] text-[10px] mt-1 leading-tight">
         {label}
       </p>
-    </div>
+    </Link>
   )
 }
 

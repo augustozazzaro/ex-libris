@@ -568,7 +568,36 @@ export default function AddBookPage() {
             null,
 
           metadata_source:
-            draft.source,
+            (() => {
+              const source =
+                (draft.source || '')
+                  .toLowerCase()
+
+              if (
+                source.includes('+') ||
+                source.includes('open library search')
+              ) {
+                return 'multi_source'
+              }
+
+              if (source.includes('sbn')) {
+                return 'sbn'
+              }
+
+              if (source.includes('google')) {
+                return 'google_books'
+              }
+
+              if (source.includes('open library')) {
+                return 'open_library'
+              }
+
+              if (source.includes('crossref')) {
+                return 'crossref'
+              }
+
+              return 'manual'
+            })(),
 
           metadata_raw:
             draft,

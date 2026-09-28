@@ -37,14 +37,16 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 z-50 md:hidden pointer-events-none [transform:translate3d(0,0,0)] [backface-visibility:hidden] [will-change:transform]"
-      style={{
-        bottom:
-          'max(8px, env(safe-area-inset-bottom))',
-      }}
+      className="fixed inset-x-0 bottom-0 z-50 md:hidden pointer-events-none"
     >
 
-      <div className="px-2.5">
+      <div
+        className="px-2.5"
+        style={{
+          paddingBottom:
+            'max(8px, env(safe-area-inset-bottom))',
+        }}
+      >
 
         <div className="exl-glass-strong max-w-[520px] mx-auto h-[64px] px-3 pointer-events-auto rounded-[30px] border border-white/50 dark:border-white/10 bg-white/[0.76] dark:bg-[#1c1c1e]/[0.76] backdrop-blur-[28px] shadow-[0_10px_35px_rgba(0,0,0,0.14)]">
 

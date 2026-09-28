@@ -75,7 +75,7 @@ export default function BookDetailHero({
                 strokeWidth={1.8}
               />
 
-              <span className="text-[11px] font-medium">
+              <span className="hidden md:inline text-[11px] font-medium">
                 In prestito
               </span>
             </>
@@ -86,7 +86,7 @@ export default function BookDetailHero({
                 strokeWidth={1.8}
               />
 
-              <span className="text-[11px] font-medium">
+              <span className="hidden md:inline text-[11px] font-medium">
                 Nella tua biblioteca
               </span>
             </>

@@ -13,6 +13,7 @@ import {
   BookOpen,
   BookmarkPlus,
   Check,
+  ChevronLeft,
   ChevronRight,
   MapPin,
   RefreshCw,
@@ -266,6 +267,52 @@ export default function ShufflePage() {
     )
   }
 
+  useEffect(() => {
+    function handleKeyDown(
+      event: KeyboardEvent
+    ) {
+      const target =
+        event.target as HTMLElement | null
+
+      if (
+        target?.closest(
+          'input, textarea, select, button, a, [contenteditable="true"]'
+        )
+      ) {
+        return
+      }
+
+      if (
+        event.key ===
+        'ArrowRight'
+      ) {
+        event.preventDefault()
+        goNext()
+        return
+      }
+
+      if (
+        event.key ===
+        'ArrowLeft'
+      ) {
+        event.preventDefault()
+        goPrevious()
+      }
+    }
+
+    window.addEventListener(
+      'keydown',
+      handleKeyDown
+    )
+
+    return () => {
+      window.removeEventListener(
+        'keydown',
+        handleKeyDown
+      )
+    }
+  }, [books.length])
+
   async function saveToRead() {
     if (!currentBook) return
 
@@ -392,6 +439,32 @@ export default function ShufflePage() {
         </header>
 
         <section className="mt-6 relative min-h-[650px]">
+
+          {books.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={goPrevious}
+                aria-label="Libro precedente"
+                className="hidden md:flex absolute left-[-54px] top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full exl-glass items-center justify-center exl-press"
+              >
+                <ChevronLeft
+                  size={22}
+                />
+              </button>
+
+              <button
+                type="button"
+                onClick={goNext}
+                aria-label="Libro successivo"
+                className="hidden md:flex absolute right-[-54px] top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full exl-glass items-center justify-center exl-press"
+              >
+                <ChevronRight
+                  size={22}
+                />
+              </button>
+            </>
+          )}
 
           {nextBookData && (
             <div className="absolute inset-x-3 top-3 bottom-0 rounded-[34px] bg-black/5 scale-[0.96] opacity-50" />

@@ -7,7 +7,7 @@ import {
   House,
   Search,
   Settings,
-  ArrowUpRight,
+  Shuffle,
   ScanBarcode,
 } from 'lucide-react'
 
@@ -46,9 +46,7 @@ export default function BottomNav() {
 
             <Link
               href="/"
-              className={
-                itemClass('/')
-              }
+              className={itemClass('/')}
             >
               <House
                 size={22}
@@ -67,14 +65,10 @@ export default function BottomNav() {
             <Link
               href="/catalog"
               className={
-                itemClass(
-                  '/catalog'
-                )
+                itemClass('/catalog')
               }
             >
-              <Search
-                size={22}
-              />
+              <Search size={22} />
 
               <span className="text-[10px] font-medium">
                 Cerca
@@ -87,41 +81,31 @@ export default function BottomNav() {
                 href="/add"
                 className="w-[58px] h-[58px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_10px_24px_rgba(0,0,0,0.22)] exl-press -mt-7"
               >
-                <ScanBarcode
-                  size={27}
-                />
+                <ScanBarcode size={27} />
               </Link>
 
             </div>
 
             <Link
-              href="/loans"
+              href="/shuffle"
               className={
-                itemClass(
-                  '/loans'
-                )
+                itemClass('/shuffle')
               }
             >
-              <ArrowUpRight
-                size={22}
-              />
+              <Shuffle size={22} />
 
               <span className="text-[10px] font-medium">
-                Prestiti
+                Shuffle
               </span>
             </Link>
 
             <Link
               href="/settings"
               className={
-                itemClass(
-                  '/settings'
-                )
+                itemClass('/settings')
               }
             >
-              <Settings
-                size={22}
-              />
+              <Settings size={22} />
 
               <span className="text-[10px] font-medium">
                 Impostazioni

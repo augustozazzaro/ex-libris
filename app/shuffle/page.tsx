@@ -19,6 +19,11 @@ import {
   Shuffle,
 } from 'lucide-react'
 
+import {
+  AnimatePresence,
+  motion,
+} from 'framer-motion'
+
 import { createClient } from '@/utils/supabase/client'
 
 type Book = {
@@ -42,13 +47,29 @@ type Location = {
 export default function ShufflePage() {
   const supabase = createClient()
 
-  const [books, setBooks] = useState<Book[]>([])
-  const [locations, setLocations] = useState<Location[]>([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState('')
+  const [books, setBooks] =
+    useState<Book[]>([])
+
+  const [locations, setLocations] =
+    useState<Location[]>([])
+
+  const [currentIndex, setCurrentIndex] =
+    useState(0)
+
+  const [direction, setDirection] =
+    useState(1)
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [saving, setSaving] =
+    useState(false)
+
+  const [saved, setSaved] =
+    useState(false)
+
+  const [error, setError] =
+    useState('')
 
   useEffect(() => {
     loadBooks()
@@ -68,11 +89,12 @@ export default function ShufflePage() {
       return
     }
 
-    const { data: membership } = await supabase
-      .from('family_members')
-      .select('family_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    const { data: membership } =
+      await supabase
+        .from('family_members')
+        .select('family_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
     if (!membership) {
       setError('Biblioteca non trovata.')
@@ -144,19 +166,30 @@ export default function ShufflePage() {
         ) as Book[]
 
     const shuffled =
-      [...available]
-        .sort(() => Math.random() - 0.5)
+      [...available].sort(
+        () => Math.random() - 0.5
+      )
 
     setBooks(shuffled)
+
     setLocations(
       (locationsResult.data ?? []) as Location[]
     )
+
     setCurrentIndex(0)
     setLoading(false)
   }
 
   const currentBook =
     books[currentIndex]
+
+  const nextBookData =
+    books.length > 1
+      ? books[
+          (currentIndex + 1) %
+            books.length
+        ]
+      : undefined
 
   const locationMap =
     useMemo(() => {
@@ -173,20 +206,28 @@ export default function ShufflePage() {
   function buildLocationPath(
     locationId: string | null
   ) {
-    if (!locationId) return 'Posizione non indicata'
+    if (!locationId) {
+      return 'Posizione non indicata'
+    }
 
     const parts: string[] = []
+
     let current =
       locationMap.get(locationId)
 
     let safety = 0
 
-    while (current && safety < 10) {
+    while (
+      current &&
+      safety < 10
+    ) {
       parts.unshift(current.name)
 
       current =
         current.parent_id
-          ? locationMap.get(current.parent_id)
+          ? locationMap.get(
+              current.parent_id
+            )
           : undefined
 
       safety += 1
@@ -195,14 +236,32 @@ export default function ShufflePage() {
     return parts.join(' · ')
   }
 
-  function nextBook() {
+  function goNext() {
     if (books.length <= 1) return
 
+    setDirection(1)
     setSaved(false)
 
     setCurrentIndex(
       (prev) =>
-        (prev + 1) % books.length
+        (prev + 1) %
+        books.length
+    )
+  }
+
+  function goPrevious() {
+    if (books.length <= 1) return
+
+    setDirection(-1)
+    setSaved(false)
+
+    setCurrentIndex(
+      (prev) =>
+        (
+          prev - 1 +
+          books.length
+        ) %
+        books.length
     )
   }
 
@@ -227,7 +286,8 @@ export default function ShufflePage() {
           reading_status: 'to_read',
         },
         {
-          onConflict: 'user_id,book_id',
+          onConflict:
+            'user_id,book_id',
         }
       )
 
@@ -250,7 +310,6 @@ export default function ShufflePage() {
     return (
       <main className="min-h-screen px-5 pt-[calc(16px+env(safe-area-inset-top))]">
         <div className="max-w-md mx-auto">
-
           <Link
             href="/"
             className="exl-glass w-11 h-11 rounded-full flex items-center justify-center"
@@ -261,7 +320,6 @@ export default function ShufflePage() {
           <div className="exl-glass exl-card p-5 mt-6 text-red-500">
             {error}
           </div>
-
         </div>
       </main>
     )
@@ -271,7 +329,6 @@ export default function ShufflePage() {
     return (
       <main className="min-h-screen px-5 pt-[calc(16px+env(safe-area-inset-top))]">
         <div className="max-w-md mx-auto text-center">
-
           <div className="w-16 h-16 rounded-[20px] bg-black text-white mx-auto flex items-center justify-center mt-16">
             <Shuffle size={28} />
           </div>
@@ -283,7 +340,6 @@ export default function ShufflePage() {
           <p className="text-[#8e8e93] mt-2">
             Non trovo altri libri non letti da proporti.
           </p>
-
         </div>
       </main>
     )
@@ -313,12 +369,11 @@ export default function ShufflePage() {
           </Link>
 
           <div className="flex items-center gap-2 text-[#8e8e93] text-sm">
-
             <Shuffle size={16} />
+
             <span>
               {currentIndex + 1} / {books.length}
             </span>
-
           </div>
 
         </div>
@@ -335,133 +390,205 @@ export default function ShufflePage() {
 
         </header>
 
-        <section className="mt-6">
+        <section className="mt-6 relative min-h-[650px]">
 
-          <div className="relative overflow-hidden rounded-[34px] shadow-[0_20px_60px_rgba(0,0,0,0.12)]">
+          {nextBookData && (
+            <div className="absolute inset-x-3 top-3 bottom-0 rounded-[34px] bg-black/5 scale-[0.96] opacity-50" />
+          )}
 
-            <div className="absolute inset-0 bg-[#ECE6DA]" />
+          <AnimatePresence
+            initial={false}
+            custom={direction}
+            mode="popLayout"
+          >
+            <motion.div
+              key={currentBook.id}
+              custom={direction}
+              initial={{
+                x:
+                  direction > 0
+                    ? 70
+                    : -70,
+                opacity: 0,
+                scale: 0.97,
+              }}
+              animate={{
+                x: 0,
+                opacity: 1,
+                scale: 1,
+              }}
+              exit={{
+                x:
+                  direction > 0
+                    ? -120
+                    : 120,
+                opacity: 0,
+                rotate:
+                  direction > 0
+                    ? -3
+                    : 3,
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 320,
+                damping: 30,
+              }}
+              drag="x"
+              dragConstraints={{
+                left: 0,
+                right: 0,
+              }}
+              dragElastic={0.18}
+              onDragEnd={(
+                _,
+                info
+              ) => {
+                if (
+                  info.offset.x < -80 ||
+                  info.velocity.x < -500
+                ) {
+                  goNext()
+                  return
+                }
 
-            {cover && (
-              <img
-                src={cover}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover scale-110 blur-[24px] opacity-25"
-              />
-            )}
+                if (
+                  info.offset.x > 80 ||
+                  info.velocity.x > 500
+                ) {
+                  goPrevious()
+                }
+              }}
+              className="relative overflow-hidden rounded-[34px] shadow-[0_20px_60px_rgba(0,0,0,0.14)] cursor-grab active:cursor-grabbing"
+            >
 
-            <div className="relative p-6">
+              <div className="absolute inset-0 bg-[#ECE6DA]" />
 
-              <div className="flex justify-center">
+              {cover && (
+                <img
+                  src={cover}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover scale-110 blur-[28px] opacity-25"
+                />
+              )}
 
-                <div className="w-[58%] max-w-[250px] aspect-[2/3] rounded-[20px] overflow-hidden bg-white/50 shadow-[0_16px_40px_rgba(0,0,0,0.20)]">
+              <div className="relative p-6">
 
-                  {cover ? (
-                    <img
-                      src={cover}
-                      alt={currentBook.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#5E7FA3] text-white">
+                <div className="flex justify-center">
 
-                      <BookOpen size={46} />
+                  <div className="w-[58%] max-w-[250px] aspect-[2/3] rounded-[20px] overflow-hidden bg-white/50 shadow-[0_16px_40px_rgba(0,0,0,0.20)]">
 
-                    </div>
+                    {cover ? (
+                      <img
+                        src={cover}
+                        alt={currentBook.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#5E7FA3] text-white">
+                        <BookOpen size={46} />
+                      </div>
+                    )}
+
+                  </div>
+
+                </div>
+
+                <div className="mt-6 text-center">
+
+                  <h2 className="text-[28px] font-bold tracking-[-0.04em] leading-tight">
+                    {currentBook.title}
+                  </h2>
+
+                  {currentBook.authors?.[0] && (
+                    <p className="text-[#6e6e73] text-[16px] mt-2">
+                      {currentBook.authors.join(', ')}
+                    </p>
                   )}
 
                 </div>
 
-              </div>
+                <div className="flex justify-center gap-2 flex-wrap mt-5">
 
-              <div className="mt-6 text-center">
+                  {currentBook.pages && (
+                    <span className="bg-white/65 backdrop-blur-md rounded-full px-3 py-2 text-xs font-medium">
+                      {currentBook.pages} pagine
+                    </span>
+                  )}
 
-                <h2 className="text-[28px] font-bold tracking-[-0.04em] leading-tight">
-                  {currentBook.title}
-                </h2>
+                  <span className="bg-white/65 backdrop-blur-md rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5">
+                    <MapPin size={13} />
+                    {location}
+                  </span>
 
-                {currentBook.authors?.[0] && (
-                  <p className="text-[#6e6e73] text-[16px] mt-2">
-                    {currentBook.authors.join(', ')}
+                </div>
+
+                {currentBook.description && (
+                  <p className="text-[#3a3a3c] text-[15px] leading-relaxed mt-6 line-clamp-5">
+                    {currentBook.description}
                   </p>
                 )}
 
-              </div>
+                <div className="grid grid-cols-[1fr_auto] gap-3 mt-6">
 
-              <div className="flex justify-center gap-2 flex-wrap mt-5">
+                  <button
+                    onPointerDown={(e) =>
+                      e.stopPropagation()
+                    }
+                    onClick={saveToRead}
+                    disabled={saving}
+                    className={`rounded-[18px] py-4 px-4 font-semibold flex items-center justify-center gap-2 exl-press ${
+                      saved
+                        ? 'bg-[#34c759] text-white'
+                        : 'bg-black text-white'
+                    }`}
+                  >
 
-                {currentBook.pages && (
-                  <span className="bg-white/65 backdrop-blur-md rounded-full px-3 py-2 text-xs font-medium">
-                    {currentBook.pages} pagine
-                  </span>
-                )}
+                    {saved ? (
+                      <>
+                        <Check size={19} />
+                        Salvato
+                      </>
+                    ) : (
+                      <>
+                        <BookmarkPlus size={19} />
+                        Da leggere
+                      </>
+                    )}
 
-                <span className="bg-white/65 backdrop-blur-md rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5">
-                  <MapPin size={13} />
-                  {location}
-                </span>
+                  </button>
 
-              </div>
+                  <button
+                    onPointerDown={(e) =>
+                      e.stopPropagation()
+                    }
+                    onClick={goNext}
+                    className="w-14 h-14 rounded-[18px] bg-white/70 backdrop-blur-md flex items-center justify-center exl-press"
+                    aria-label="Prossimo libro"
+                  >
+                    <RefreshCw size={20} />
+                  </button>
 
-              {currentBook.description && (
-                <p className="text-[#3a3a3c] text-[15px] leading-relaxed mt-6 line-clamp-5">
-                  {currentBook.description}
-                </p>
-              )}
+                </div>
 
-              <div className="grid grid-cols-[1fr_auto] gap-3 mt-6">
-
-                <button
-                  onClick={saveToRead}
-                  disabled={saving}
-                  className={`rounded-[18px] py-4 px-4 font-semibold flex items-center justify-center gap-2 exl-press ${
-                    saved
-                      ? 'bg-[#34c759] text-white'
-                      : 'bg-black text-white'
-                  }`}
+                <Link
+                  href={`/books/${currentBook.id}`}
+                  onPointerDown={(e) =>
+                    e.stopPropagation()
+                  }
+                  className="mt-3 py-3 flex items-center justify-center gap-1 text-[#5E7FA3] text-sm font-semibold"
                 >
-
-                  {saved ? (
-                    <>
-                      <Check size={19} />
-                      Salvato
-                    </>
-                  ) : (
-                    <>
-                      <BookmarkPlus size={19} />
-                      Da leggere
-                    </>
-                  )}
-
-                </button>
-
-                <button
-                  onClick={nextBook}
-                  className="w-14 h-14 rounded-[18px] bg-white/70 backdrop-blur-md flex items-center justify-center exl-press"
-                  aria-label="Prossimo libro"
-                >
-                  <RefreshCw size={20} />
-                </button>
+                  Apri scheda
+                  <ChevronRight size={16} />
+                </Link>
 
               </div>
 
-              <Link
-                href={`/books/${currentBook.id}`}
-                className="mt-3 py-3 flex items-center justify-center gap-1 text-[#5E7FA3] text-sm font-semibold"
-              >
-                Apri scheda
-                <ChevronRight size={16} />
-              </Link>
+            </motion.div>
+          </AnimatePresence>
 
-            </div>
-
-          </div>
-
-          <button
-            onClick={nextBook}
-            className="w-full text-[#8e8e93] text-sm mt-5 py-3"
-          >
-            Non mi ispira — mostramene un altro
-          </button>
+          <p className="text-center text-[#8e8e93] text-xs mt-5">
+            Scorri ← o → per cambiare libro
+          </p>
 
         </section>
 

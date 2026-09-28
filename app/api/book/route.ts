@@ -1324,10 +1324,33 @@ export async function GET(
     entrambe le forme di frontend.
   */
 
+  const legacyBook = {
+    ...book,
+
+    cover:
+      book.cover_url,
+
+    publicationDate:
+      book.publishedDate,
+
+    edition: '',
+
+    language: '',
+  }
+
   return NextResponse.json({
     ...book,
 
-    book,
+    found: true,
+    exact: true,
+    mode: 'isbn',
+
+    book:
+      legacyBook,
+
+    items: [
+      legacyBook
+    ],
 
     matches:
       meaningful.length,

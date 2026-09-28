@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
 import IsbnScanner from '@/components/IsbnScanner'
 
@@ -645,12 +646,6 @@ export default function AddBookPage() {
     }
   }
 
-  const shelves =
-    locations.filter(
-      (location) =>
-        location.location_type ===
-        'shelf'
-    )
 
   return (
     <main className="exl-page">
@@ -1128,48 +1123,11 @@ export default function AddBookPage() {
                 }
               />
 
-              <div>
-
-                <label className="text-xs text-[#8e8e93] ml-2">
-                  Posizione
-                </label>
-
-                <select
-                  value={
-                    locationId
-                  }
-                  onChange={(e) =>
-                    changeLocation(
-                      e.target.value
-                    )
-                  }
-                  className="w-full bg-white/70 rounded-2xl px-4 py-4 mt-1 outline-none"
-                >
-
-                  <option value="">
-                    Nessuna posizione
-                  </option>
-
-                  {shelves.map(
-                    (shelf) => (
-                      <option
-                        key={
-                          shelf.id
-                        }
-                        value={
-                          shelf.id
-                        }
-                      >
-                        {buildLocationPath(
-                          shelf.id
-                        )}
-                      </option>
-                    )
-                  )}
-
-                </select>
-
-              </div>
+              <LocationPicker
+                locations={locations}
+                value={locationId}
+                onChange={changeLocation}
+              />
 
             </div>
 

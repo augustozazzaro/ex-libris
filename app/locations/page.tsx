@@ -55,6 +55,22 @@ export default function LocationsPage() {
   const [selected, setSelected] =
     useState<Location | null>(null)
 
+
+  const [editingLocation, setEditingLocation] =
+    useState<Location | null>(null)
+
+  const [editName, setEditName] =
+    useState('')
+
+  const [editType, setEditType] =
+    useState('other')
+
+  const [editParentId, setEditParentId] =
+    useState('')
+
+  const [deleteTarget, setDeleteTarget] =
+    useState<Location | null>(null)
+
   const [showAdd, setShowAdd] =
     useState(false)
 
@@ -177,6 +193,65 @@ export default function LocationsPage() {
     )
   }
 
+
+  function locationPath(
+    id: string
+  ) {
+    const path: Location[] = []
+
+    let current =
+      locations.find(
+        (item) =>
+          item.id === id
+      )
+
+    let safety = 0
+
+    while (
+      current &&
+      safety < 20
+    ) {
+      path.unshift(current)
+
+      current =
+        current.parent_id
+          ? locations.find(
+              (item) =>
+                item.id ===
+                current!.parent_id
+            )
+          : undefined
+
+      safety += 1
+    }
+
+    return path
+  }
+
+  function addInside(
+    location: Location
+  ) {
+    setParentId(location.id)
+
+    setType(
+      location.location_type === 'house'
+        ? 'room'
+        : location.location_type === 'room'
+          ? 'bookcase'
+          : location.location_type === 'bookcase'
+            ? 'shelf'
+            : 'other'
+    )
+
+    setName('')
+    setShowAdd(true)
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
   async function addLocation() {
     if (
       !name.trim() ||
@@ -217,79 +292,99 @@ export default function LocationsPage() {
     await loadData()
   }
 
-  async function rename(
+  function beginEdit(
     location: Location
   ) {
-    const newName =
-      window.prompt(
-        'Nuovo nome',
-        location.name
-      )
+    setEditingLocation(location)
+    setEditName(location.name)
+    setEditType(location.location_type)
+    setEditParentId(location.parent_id ?? '')
+  }
 
-    if (!newName?.trim()) {
+  async function saveLocationEdit() {
+    if (
+      !editingLocation ||
+      !editName.trim()
+    ) {
       return
     }
 
-    await supabase
-      .from('locations')
-      .update({
-        name:
-          newName.trim(),
-      })
-      .eq(
-        'id',
-        location.id
-      )
+    const { error } =
+      await supabase
+        .from('locations')
+        .update({
+          name: editName.trim(),
+          location_type: editType,
+          parent_id:
+            editParentId || null,
+        })
+        .eq(
+          'id',
+          editingLocation.id
+        )
 
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    setEditingLocation(null)
     setSelected(null)
 
     await loadData()
   }
 
-  async function remove(
+  function requestDelete(
     location: Location
   ) {
+    setDeleteTarget(location)
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+
     const children =
       locations.filter(
         (item) =>
           item.parent_id ===
-          location.id
+          deleteTarget.id
       )
 
-    if (children.length) {
-      window.alert(
-        'Questa posizione contiene altre posizioni.'
+    if (children.length > 0) {
+      setError(
+        'Questa posizione contiene altre posizioni. Spostale prima di eliminarla.'
       )
+      setDeleteTarget(null)
       return
     }
 
     if (
       booksInside(
-        location.id
-      ).length
+        deleteTarget.id
+      ).length > 0
     ) {
-      window.alert(
-        'Sposta prima i libri contenuti in questa posizione.'
+      setError(
+        'Questa posizione contiene libri. Spostali prima di eliminarla.'
       )
+      setDeleteTarget(null)
       return
     }
 
-    if (
-      !window.confirm(
-        `Eliminare "${location.name}"?`
-      )
-    ) {
+    const { error } =
+      await supabase
+        .from('locations')
+        .delete()
+        .eq(
+          'id',
+          deleteTarget.id
+        )
+
+    if (error) {
+      setError(error.message)
       return
     }
 
-    await supabase
-      .from('locations')
-      .delete()
-      .eq(
-        'id',
-        location.id
-      )
-
+    setDeleteTarget(null)
     setSelected(null)
 
     await loadData()
@@ -353,9 +448,47 @@ export default function LocationsPage() {
         {showAdd && (
           <section className="exl-glass exl-card p-5 mt-5">
 
-            <h2 className="font-bold text-lg">
-              Nuova posizione
-            </h2>
+            <div className="flex items-start justify-between gap-4">
+
+              <div>
+
+                <h2 className="font-bold text-lg">
+                  Nuova posizione
+                </h2>
+
+                {parentId && (
+                  <p className="text-[#8e8e93] text-sm mt-1">
+                    Dentro{' '}
+                    <span className="font-medium text-black/70 dark:text-white/80">
+                      {
+                        locationPath(
+                          parentId
+                        )
+                          .map(
+                            (item) =>
+                              item.name
+                          )
+                          .join(' · ')
+                      }
+                    </span>
+                  </p>
+                )}
+
+              </div>
+
+              {parentId && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setParentId('')
+                  }
+                  className="text-[#8e8e93] text-sm"
+                >
+                  Rimuovi
+                </button>
+              )}
+
+            </div>
 
             <div className="space-y-3 mt-4">
 
@@ -477,6 +610,10 @@ export default function LocationsPage() {
                   onSelect={
                     setSelected
                   }
+                  selectedId={
+                    selected?.id ??
+                    null
+                  }
                 />
               )
             )}
@@ -512,7 +649,38 @@ export default function LocationsPage() {
 
                 </div>
 
-                <p className="text-[#8e8e93] mt-4">
+                <div className="flex items-center gap-1.5 flex-wrap mt-4">
+
+                  {locationPath(
+                    selected.id
+                  ).map(
+                    (
+                      item,
+                      index
+                    ) => (
+                      <div
+                        key={
+                          item.id
+                        }
+                        className="flex items-center gap-1.5"
+                      >
+                        {index > 0 && (
+                          <ChevronRight
+                            size={12}
+                            className="text-[#c7c7cc]"
+                          />
+                        )}
+
+                        <span className="text-[#8e8e93] text-xs">
+                          {item.name}
+                        </span>
+                      </div>
+                    )
+                  )}
+
+                </div>
+
+                <p className="text-[#8e8e93] mt-3">
                   {
                     booksInside(
                       selected.id
@@ -521,29 +689,41 @@ export default function LocationsPage() {
                   libri
                 </p>
 
-                <div className="grid grid-cols-2 gap-2 mt-4">
+                <button
+                  onClick={() =>
+                    addInside(
+                      selected
+                    )
+                  }
+                  className="w-full bg-black text-white rounded-2xl py-3.5 mt-4 flex items-center justify-center gap-2 font-semibold exl-press"
+                >
+                  <Plus size={17} />
+                  Aggiungi qui
+                </button>
+
+                <div className="grid grid-cols-2 gap-2 mt-3">
 
                   <button
                     onClick={() =>
-                      rename(
+                      beginEdit(
                         selected
                       )
                     }
-                    className="bg-white/70 rounded-2xl py-3 flex items-center justify-center gap-2"
+                    className="bg-white/70 rounded-2xl py-3 flex items-center justify-center gap-2 exl-press"
                   >
                     <Pencil
                       size={16}
                     />
-                    Rinomina
+                    Modifica
                   </button>
 
                   <button
                     onClick={() =>
-                      remove(
+                      requestDelete(
                         selected
                       )
                     }
-                    className="bg-white/70 text-red-500 rounded-2xl py-3 flex items-center justify-center gap-2"
+                    className="bg-white/70 text-red-500 rounded-2xl py-3 flex items-center justify-center gap-2 exl-press"
                   >
                     <Trash2
                       size={16}
@@ -621,6 +801,174 @@ export default function LocationsPage() {
 
       </div>
 
+      {editingLocation && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center">
+
+          <button
+            type="button"
+            onClick={() =>
+              setEditingLocation(null)
+            }
+            className="absolute inset-0 bg-black/25 backdrop-blur-[2px]"
+          />
+
+          <div className="relative w-full max-w-xl bg-[#f5f3ee]/95 dark:bg-[#1c1c1e]/95 backdrop-blur-3xl rounded-t-[30px] p-5 pb-[calc(20px+env(safe-area-inset-bottom))] shadow-[0_-12px_50px_rgba(0,0,0,0.18)]">
+
+            <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-5" />
+
+            <div className="flex items-center justify-between">
+
+              <div>
+                <p className="text-[#8e8e93] text-xs">
+                  Posizione
+                </p>
+
+                <h2 className="text-[24px] font-bold tracking-[-0.03em]">
+                  Modifica
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setEditingLocation(null)
+                }
+                className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div className="space-y-3 mt-5">
+
+              <input
+                value={editName}
+                onChange={(e) =>
+                  setEditName(
+                    e.target.value
+                  )
+                }
+                placeholder="Nome"
+                className="w-full bg-white/70 dark:bg-white/10 rounded-2xl px-4 py-4 outline-none"
+              />
+
+              <select
+                value={editType}
+                onChange={(e) =>
+                  setEditType(
+                    e.target.value
+                  )
+                }
+                className="w-full bg-white/70 dark:bg-white/10 rounded-2xl px-4 py-4 outline-none"
+              >
+                <option value="house">Casa</option>
+                <option value="room">Stanza</option>
+                <option value="bookcase">Libreria</option>
+                <option value="shelf">Ripiano</option>
+                <option value="box">Scatola</option>
+                <option value="other">Altro</option>
+              </select>
+
+              <select
+                value={editParentId}
+                onChange={(e) =>
+                  setEditParentId(
+                    e.target.value
+                  )
+                }
+                className="w-full bg-white/70 dark:bg-white/10 rounded-2xl px-4 py-4 outline-none"
+              >
+
+                <option value="">
+                  Nessuna posizione superiore
+                </option>
+
+                {locations
+                  .filter(
+                    (location) =>
+                      location.id !==
+                      editingLocation.id
+                  )
+                  .map(
+                    (location) => (
+                      <option
+                        key={location.id}
+                        value={location.id}
+                      >
+                        {location.name}
+                      </option>
+                    )
+                  )}
+
+              </select>
+
+            </div>
+
+            <button
+              type="button"
+              onClick={saveLocationEdit}
+              className="w-full bg-black text-white rounded-2xl py-4 font-semibold mt-5 exl-press"
+            >
+              Salva modifiche
+            </button>
+
+          </div>
+
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[110] flex items-end justify-center">
+
+          <button
+            type="button"
+            onClick={() =>
+              setDeleteTarget(null)
+            }
+            className="absolute inset-0 bg-black/25 backdrop-blur-[2px]"
+          />
+
+          <div className="relative w-full max-w-xl bg-[#f5f3ee]/95 dark:bg-[#1c1c1e]/95 backdrop-blur-3xl rounded-t-[30px] p-5 pb-[calc(20px+env(safe-area-inset-bottom))] shadow-[0_-12px_50px_rgba(0,0,0,0.18)]">
+
+            <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-5" />
+
+            <h2 className="text-[23px] font-bold tracking-[-0.03em]">
+              Eliminare “{deleteTarget.name}”?
+            </h2>
+
+            <p className="text-[#8e8e93] text-sm mt-2 leading-relaxed">
+              La posizione verrà rimossa definitivamente.
+              Se contiene libri o altre posizioni, Ex Libris ti impedirà di eliminarla.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 mt-6">
+
+              <button
+                type="button"
+                onClick={() =>
+                  setDeleteTarget(null)
+                }
+                className="bg-white/70 dark:bg-white/10 rounded-2xl py-4 font-semibold exl-press"
+              >
+                Annulla
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="bg-[#ff3b30] text-white rounded-2xl py-4 font-semibold exl-press"
+              >
+                Elimina
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
     </main>
   )
 }
@@ -631,6 +979,7 @@ function LocationNode({
   locations,
   booksInside,
   onSelect,
+  selectedId,
 }: {
   location: Location
   level: number
@@ -641,6 +990,7 @@ function LocationNode({
   onSelect: (
     location: Location
   ) => void
+  selectedId: string | null
 }) {
   const children =
     locations.filter(
@@ -671,7 +1021,11 @@ function LocationNode({
             location
           )
         }
-        className="exl-glass exl-card w-full p-4 flex items-center justify-between text-left exl-press"
+        className={`exl-glass exl-card w-full p-4 flex items-center justify-between text-left exl-press ${
+          selectedId === location.id
+            ? 'ring-2 ring-black/10'
+            : ''
+        }`}
       >
 
         <div className="flex items-center gap-3">
@@ -736,6 +1090,9 @@ function LocationNode({
                 }
                 onSelect={
                   onSelect
+                }
+                selectedId={
+                  selectedId
                 }
               />
             )

@@ -25,6 +25,9 @@ import {
 import { createClient } from '@/utils/supabase/client'
 import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
+import BookDetailHero from '@/components/BookDetailHero'
+import BookSynopsis from '@/components/BookSynopsis'
+import BookMetadataSections from '@/components/BookMetadataSections'
 import ReadingStateCard from '@/components/ReadingStateCard'
 
 import {
@@ -421,150 +424,42 @@ export default function BookPage() {
         {!editing ? (
           <>
 
-            <section className="mt-8 grid md:grid-cols-[260px_1fr] gap-8 md:gap-12">
+            <BookDetailHero
+              title={book.title}
+              subtitle={book.subtitle}
+              authors={book.authors}
+              publisher={book.publisher}
+              publicationYear={
+                book.publication_year
+              }
+              pages={book.pages}
+              status={book.status}
+              coverUrl={cover}
+              locationPath={
+                locationPath ||
+                null
+              }
+            />
 
-              <div className="max-w-[230px] md:max-w-none mx-auto w-full">
-
-                <div className="aspect-[2/3] rounded-[22px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
-
-                  <BookCover
-                    title={book.title}
-                    authors={book.authors}
-                    coverUrl={cover}
-                  />
-
-                </div>
-
-              </div>
-
-              <div className="text-center md:text-left">
-
-                <h1 className="text-[32px] md:text-[42px] leading-[1.05] font-bold tracking-[-0.045em]">
-                  {book.title}
-                </h1>
-
-                {book.subtitle && (
-                  <p className="text-[#8e8e93] text-lg mt-3">
-                    {book.subtitle}
-                  </p>
-                )}
-
-                {book.authors?.length ? (
-                  <p className="text-[18px] mt-5">
-                    {book.authors.join(', ')}
-                  </p>
-                ) : null}
-
-                <div className="flex flex-wrap gap-2 justify-center md:justify-start mt-6">
-
-                  <span className="exl-glass rounded-full px-3 py-1.5 text-sm">
-
-                    {book.status === 'home'
-                      ? 'A casa'
-                      : book.status ===
-                          'loaned'
-                        ? 'In prestito'
-                        : book.status}
-
-                  </span>
-
-                  {book.publication_year && (
-                    <span className="exl-glass rounded-full px-3 py-1.5 text-sm">
-                      {book.publication_year}
-                    </span>
-                  )}
-
-                </div>
-
-                {locationPath && (
-                  <div className="exl-glass exl-card p-5 mt-7 text-left">
-
-                    <p className="text-[#8e8e93] text-xs uppercase tracking-wider">
-                      Posizione
-                    </p>
-
-                    <p className="mt-2 font-medium flex items-start gap-2">
-
-                      <MapPin
-                        size={18}
-                        className="mt-0.5 shrink-0"
-                      />
-
-                      {locationPath}
-
-                    </p>
-
-                  </div>
-                )}
-
-              </div>
-
-            </section>
-
-            <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-9">
-
-              <InfoCard
-                label="Editore"
-                value={book.publisher}
-              />
-
-              <InfoCard
-                label="Pagine"
-                value={
-                  book.pages
-                    ? String(
-                        book.pages
-                      )
-                    : null
-                }
-              />
-
-              <InfoCard
-                label="Lingua"
-                value={book.language}
-              />
-
-              <InfoCard
-                label="ISBN"
-                value={
-                  book.isbn_13 ||
-                  book.isbn_10
-                }
-              />
-
-            </section>
+            <BookMetadataSections
+              categories={book.categories}
+              language={book.language}
+              publisher={book.publisher}
+              isbn10={book.isbn_10}
+              isbn13={book.isbn_13}
+              notes={book.notes}
+            />
 
             <ReadingStateCard
               bookId={book.id}
             />
 
             {book.description && (
-              <section className="exl-glass exl-card p-6 mt-5">
-
-                <h2 className="font-bold text-lg">
-                  Descrizione
-                </h2>
-
-                <p className="text-[#636366] leading-relaxed mt-3">
-                  {book.description}
-                </p>
-
-              </section>
+              <BookSynopsis
+                text={book.description}
+              />
             )}
 
-            {book.notes && (
-              <section className="exl-glass exl-card p-6 mt-4">
-
-                <h2 className="font-bold text-lg">
-                  Note
-                </h2>
-
-                <p className="text-[#636366] whitespace-pre-wrap mt-3">
-                  {book.notes}
-                </p>
-
-              </section>
-            )}
 
           </>
         ) : (
@@ -713,30 +608,6 @@ export default function BookPage() {
       </div>
 
     </main>
-  )
-}
-
-function InfoCard({
-  label,
-  value,
-}: {
-  label: string
-  value: string | null
-}) {
-  if (!value) return null
-
-  return (
-    <div className="exl-glass exl-card p-4">
-
-      <p className="text-[#8e8e93] text-xs">
-        {label}
-      </p>
-
-      <p className="font-semibold mt-1 break-words">
-        {value}
-      </p>
-
-    </div>
   )
 }
 

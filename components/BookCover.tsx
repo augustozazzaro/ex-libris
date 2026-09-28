@@ -110,7 +110,7 @@ export default function BookCover({
         onError={() =>
           setImageFailed(true)
         }
-        className={`w-full h-full object-cover ${className}`}
+        className={`w-full h-full object-cover exl-cover-in ${className}`}
       />
     )
   }

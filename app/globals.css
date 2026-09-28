@@ -187,3 +187,191 @@ body {
   }
 }
 
+
+/* =====================================================
+   EX LIBRIS — MOTION SYSTEM
+   ===================================================== */
+
+:root {
+  --exl-motion-fast: 140ms;
+  --exl-motion-base: 220ms;
+  --exl-motion-slow: 340ms;
+  --exl-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --exl-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.exl-press {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+
+  transition:
+    transform var(--exl-motion-fast) var(--exl-ease-out),
+    opacity var(--exl-motion-fast) ease,
+    box-shadow var(--exl-motion-base) var(--exl-ease-out),
+    background-color var(--exl-motion-base) ease,
+    border-color var(--exl-motion-base) ease;
+}
+
+.exl-press:active {
+  transform: scale(0.965);
+  opacity: 0.9;
+}
+
+.exl-card {
+  transition:
+    transform var(--exl-motion-base) var(--exl-ease-out),
+    box-shadow var(--exl-motion-base) var(--exl-ease-out),
+    background-color var(--exl-motion-base) ease;
+}
+
+.exl-book-cover {
+  transition:
+    transform var(--exl-motion-slow) var(--exl-ease-out),
+    box-shadow var(--exl-motion-slow) var(--exl-ease-out);
+}
+
+.exl-fade-up {
+  animation:
+    exlFadeUp
+    420ms
+    var(--exl-ease-out)
+    both;
+}
+
+.exl-pop {
+  animation:
+    exlPop
+    360ms
+    var(--exl-ease-spring)
+    both;
+}
+
+.exl-success-pop {
+  animation:
+    exlSuccessPop
+    460ms
+    var(--exl-ease-spring)
+    both;
+}
+
+@keyframes exlFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes exlPop {
+  0% {
+    transform: scale(0.82);
+    opacity: 0.65;
+  }
+
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes exlSuccessPop {
+  0% {
+    transform: scale(0.88);
+  }
+
+  45% {
+    transform: scale(1.08);
+  }
+
+  75% {
+    transform: scale(0.98);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .exl-press:hover {
+    transform: translateY(-1px);
+  }
+
+  .exl-book-cover:hover {
+    transform: translateY(-3px) scale(1.012);
+    box-shadow:
+      0 14px 32px rgba(0, 0, 0, 0.16),
+      0 3px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* EX LIBRIS — interactive polish */
+
+input,
+textarea,
+select {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms var(--exl-ease-out);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow:
+    0 0 0 3px rgba(94, 127, 163, 0.10);
+}
+
+.exl-feedback-in {
+  animation:
+    exlFeedbackIn
+    380ms
+    var(--exl-ease-spring)
+    both;
+}
+
+@keyframes exlFeedbackIn {
+  0% {
+    opacity: 0;
+    transform:
+      translateY(6px)
+      scale(0.96);
+  }
+
+  70% {
+    opacity: 1;
+    transform:
+      translateY(-1px)
+      scale(1.015);
+  }
+
+  100% {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}

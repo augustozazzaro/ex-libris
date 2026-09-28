@@ -1,5 +1,7 @@
 'use client'
 
+import ExLibrisLoader from '@/components/ExLibrisLoader'
+
 import {
   ChangeEvent,
   useEffect,
@@ -24,6 +26,9 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  haptic,
+} from '@/utils/haptics'
 import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
 import BookDetailHero from '@/components/BookDetailHero'
@@ -345,6 +350,14 @@ export default function BookPage() {
       setPersonalFavorite(
         newValue
       )
+
+      haptic(
+        newValue
+          ? 'success'
+          : 'light'
+      )
+    } else {
+      haptic('error')
     }
   }
 
@@ -701,9 +714,12 @@ export default function BookPage() {
         error.message
       )
 
+      haptic('error')
       setSaving(false)
       return
     }
+
+    haptic('success')
 
     setEditing(false)
     setSaving(false)
@@ -737,7 +753,7 @@ export default function BookPage() {
     return (
       <main className="min-h-screen flex items-center justify-center">
 
-        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+        <ExLibrisLoader />
 
       </main>
     )
@@ -792,6 +808,11 @@ export default function BookPage() {
                   personalFavorite
                     ? 'currentColor'
                     : 'none'
+                }
+                className={
+                  personalFavorite
+                    ? 'exl-pop'
+                    : ''
                 }
               />
             </button>

@@ -1,5 +1,7 @@
 'use client'
 
+import ExLibrisLoader from '@/components/ExLibrisLoader'
+
 import {
   FormEvent,
   useEffect,
@@ -7,6 +9,10 @@ import {
 } from 'react'
 
 import Link from 'next/link'
+
+import {
+  motion,
+} from 'framer-motion'
 
 import {
   BookOpen,
@@ -175,7 +181,7 @@ export default function Home() {
   if (loading || authenticated === null) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+        <ExLibrisLoader />
       </main>
     )
   }
@@ -314,9 +320,19 @@ export default function Home() {
 
         <section className="grid grid-cols-2 gap-3 mt-5">
 
+          <motion.div
+            initial={{ opacity: 0, y: 14, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+              delay: 0.04,
+              duration: 0.38,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="col-span-2"
+          >
           <Link
             href="/catalog"
-            className="col-span-2 min-h-[165px] rounded-[28px] p-5 text-white flex flex-col justify-between exl-press shadow-sm"
+            className="min-h-[165px] rounded-[28px] p-5 text-white flex flex-col justify-between exl-press shadow-sm"
             style={{
               backgroundColor: '#5E7FA3',
             }}
@@ -348,7 +364,17 @@ export default function Home() {
             </div>
 
           </Link>
+          </motion.div>
 
+          <motion.div
+            initial={{ opacity: 0, y: 14, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+              delay: 0.10,
+              duration: 0.38,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
           <Link
             href="/favorites"
             className="min-h-[135px] rounded-[25px] p-4 text-white flex flex-col justify-between exl-press shadow-sm"
@@ -375,7 +401,17 @@ export default function Home() {
             </p>
 
           </Link>
+          </motion.div>
 
+          <motion.div
+            initial={{ opacity: 0, y: 14, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+              delay: 0.16,
+              duration: 0.38,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
           <Link
             href="/loans"
             className="min-h-[135px] rounded-[25px] p-4 text-white flex flex-col justify-between exl-press shadow-sm"
@@ -402,6 +438,7 @@ export default function Home() {
             </p>
 
           </Link>
+          </motion.div>
 
         </section>
 
@@ -425,17 +462,44 @@ export default function Home() {
 
           <div className="flex gap-4 overflow-x-auto exl-scrollbar-none -mx-5 px-5 pb-4">
 
-            {recentBooks.map((book) => {
+            {recentBooks.map((book, index) => {
 
               const cover =
                 book.custom_cover_url ||
                 book.cover_url
 
               return (
+                <motion.div
+                  key={book.id}
+                  initial={{
+                    opacity: 0,
+                    x: 12,
+                    scale: 0.97,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    x: 0,
+                    scale: 1,
+                  }}
+                  transition={{
+                    delay:
+                      Math.min(
+                        index * 0.045,
+                        0.25
+                      ),
+                    duration: 0.34,
+                    ease: [
+                      0.22,
+                      1,
+                      0.36,
+                      1,
+                    ],
+                  }}
+                  className="w-[128px] shrink-0"
+                >
                 <Link
                   href={`/books/${book.id}`}
-                  key={book.id}
-                  className="w-[128px] shrink-0 exl-press"
+                  className="block exl-press"
                 >
 
                   <div className="aspect-[2/3] rounded-[16px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
@@ -459,6 +523,7 @@ export default function Home() {
                   )}
 
                 </Link>
+                </motion.div>
               )
             })}
 

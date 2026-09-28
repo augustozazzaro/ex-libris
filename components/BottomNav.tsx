@@ -1,7 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import {
+  usePathname,
+} from 'next/navigation'
+
+import {
+  motion,
+} from 'framer-motion'
 
 import {
   House,
@@ -11,8 +17,13 @@ import {
   ScanBarcode,
 } from 'lucide-react'
 
+import {
+  haptic,
+} from '@/utils/haptics'
+
 export default function BottomNav() {
-  const pathname = usePathname()
+  const pathname =
+    usePathname()
 
   const isActive = (
     path: string
@@ -26,14 +37,78 @@ export default function BottomNav() {
     )
   }
 
-  const itemClass = (
-    path: string
-  ) =>
-    `flex flex-col items-center justify-center gap-1 min-w-0 exl-press ${
+  function navItem(
+    path: string,
+    label: string,
+    Icon: typeof House
+  ) {
+    const active =
       isActive(path)
-        ? 'text-black'
-        : 'text-[#8e8e93]'
-    }`
+
+    return (
+      <Link
+        href={path}
+        onClick={() =>
+          haptic('light')
+        }
+        className="relative flex flex-col items-center justify-center gap-1 min-w-0 h-[54px] exl-press"
+      >
+
+        {active && (
+          <motion.div
+            layoutId="bottom-nav-active"
+            transition={{
+              type: 'spring',
+              stiffness: 420,
+              damping: 32,
+            }}
+            className="absolute inset-x-2 top-1 bottom-1 rounded-[20px] bg-black/[0.055] dark:bg-white/[0.09]"
+          />
+        )}
+
+        <motion.div
+          animate={{
+            y: active
+              ? -1
+              : 0,
+            scale: active
+              ? 1.06
+              : 1,
+          }}
+          transition={{
+            type: 'spring',
+            stiffness: 450,
+            damping: 30,
+          }}
+          className={`relative z-10 ${
+            active
+              ? 'text-black dark:text-white'
+              : 'text-[#8e8e93]'
+          }`}
+        >
+          <Icon
+            size={22}
+            strokeWidth={
+              active
+                ? 2.35
+                : 2
+            }
+          />
+        </motion.div>
+
+        <span
+          className={`relative z-10 text-[10px] font-medium transition-colors ${
+            active
+              ? 'text-black dark:text-white'
+              : 'text-[#8e8e93]'
+          }`}
+        >
+          {label}
+        </span>
+
+      </Link>
+    )
+  }
 
   return (
     <nav
@@ -52,73 +127,56 @@ export default function BottomNav() {
 
           <div className="grid grid-cols-5 items-center h-full">
 
-            <Link
-              href="/"
-              className={itemClass('/')}
-            >
-              <House
-                size={22}
-                strokeWidth={
-                  isActive('/')
-                    ? 2.4
-                    : 2
-                }
-              />
+            {navItem(
+              '/',
+              'Home',
+              House
+            )}
 
-              <span className="text-[10px] font-medium">
-                Home
-              </span>
-            </Link>
-
-            <Link
-              href="/catalog"
-              className={
-                itemClass('/catalog')
-              }
-            >
-              <Search size={22} />
-
-              <span className="text-[10px] font-medium">
-                Cerca
-              </span>
-            </Link>
+            {navItem(
+              '/catalog',
+              'Cerca',
+              Search
+            )}
 
             <div className="flex justify-center relative">
 
-              <Link
-                href="/add"
-                className="w-[50px] h-[50px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_8px_20px_rgba(0,0,0,0.20)] exl-press"
+              <motion.div
+                whileTap={{
+                  scale: 0.9,
+                }}
+                whileHover={{
+                  scale: 1.04,
+                }}
               >
-                <ScanBarcode size={27} />
-              </Link>
+
+                <Link
+                  href="/add"
+                  onClick={() =>
+                    haptic('medium')
+                  }
+                  className="w-[50px] h-[50px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_8px_20px_rgba(0,0,0,0.20)] exl-press"
+                >
+                  <ScanBarcode
+                    size={27}
+                  />
+                </Link>
+
+              </motion.div>
 
             </div>
 
-            <Link
-              href="/shuffle"
-              className={
-                itemClass('/shuffle')
-              }
-            >
-              <Shuffle size={22} />
+            {navItem(
+              '/shuffle',
+              'Shuffle',
+              Shuffle
+            )}
 
-              <span className="text-[10px] font-medium">
-                Shuffle
-              </span>
-            </Link>
-
-            <Link
-              href="/settings"
-              className={
-                itemClass('/settings')
-              }
-            >
-              <Settings size={22} />
-
-              <span className="text-[10px] font-medium">
-                Impostazioni
-              </span>
-            </Link>
+            {navItem(
+              '/settings',
+              'Impostazioni',
+              Settings
+            )}
 
           </div>
 

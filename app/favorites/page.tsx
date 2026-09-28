@@ -1,5 +1,7 @@
 'use client'
 
+import ExLibrisLoader from '@/components/ExLibrisLoader'
+
 import {
   useEffect,
   useState,
@@ -89,7 +91,7 @@ export default function FavoritesPage() {
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+        <ExLibrisLoader />
       </main>
     )
   }

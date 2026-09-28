@@ -1,5 +1,7 @@
 'use client'
 
+import ExLibrisLoader from '@/components/ExLibrisLoader'
+
 import {
   useEffect,
   useMemo,
@@ -27,6 +29,10 @@ import {
 
 import { createClient } from '@/utils/supabase/client'
 import BookCover from '@/components/BookCover'
+
+import {
+  haptic,
+} from '@/utils/haptics'
 
 type Book = {
   id: string
@@ -241,6 +247,8 @@ export default function ShufflePage() {
   function goNext() {
     if (books.length <= 1) return
 
+    haptic('light')
+
     setDirection(1)
     setSaved(false)
 
@@ -253,6 +261,8 @@ export default function ShufflePage() {
 
   function goPrevious() {
     if (books.length <= 1) return
+
+    haptic('light')
 
     setDirection(-1)
     setSaved(false)
@@ -341,6 +351,7 @@ export default function ShufflePage() {
 
     if (!error) {
       setSaved(true)
+      haptic('success')
     }
 
     setSaving(false)
@@ -349,7 +360,7 @@ export default function ShufflePage() {
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+        <ExLibrisLoader />
       </main>
     )
   }

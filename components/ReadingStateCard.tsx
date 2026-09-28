@@ -13,6 +13,9 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  haptic,
+} from '@/utils/haptics'
 
 type ReadingStatus =
   | 'none'
@@ -126,6 +129,16 @@ export default function ReadingStateCard({
     if (!error) {
       setStatus(newStatus)
       setReadAt(newReadAt)
+
+      if (
+        newStatus === 'read'
+      ) {
+        haptic('success')
+      } else {
+        haptic('medium')
+      }
+    } else {
+      haptic('error')
     }
 
     setSaving(false)
@@ -216,7 +229,7 @@ export default function ReadingStateCard({
                 }
                 className={`rounded-[18px] min-h-[92px] px-2 py-3 flex flex-col items-center justify-center gap-2 transition exl-press ${
                   active
-                    ? 'bg-black text-white'
+                    ? 'bg-black text-white exl-success-pop'
                     : 'bg-white/65'
                 }`}
               >

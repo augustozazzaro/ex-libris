@@ -21,6 +21,9 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  haptic,
+} from '@/utils/haptics'
 import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
 import IsbnScanner from '@/components/IsbnScanner'
@@ -687,9 +690,13 @@ export default function AddBookPage() {
       setError(
         insertError.message
       )
+
+      haptic('error')
       setSaving(false)
       return
     }
+
+    haptic('success')
 
     setSaving(false)
 

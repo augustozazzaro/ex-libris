@@ -1,5 +1,7 @@
 'use client'
 
+import ExLibrisLoader from '@/components/ExLibrisLoader'
+
 import {
   Suspense,
   useEffect,
@@ -39,7 +41,7 @@ export default function MyBooksPage() {
     <Suspense
       fallback={
         <main className="min-h-screen flex items-center justify-center">
-          <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+          <ExLibrisLoader />
         </main>
       }
     >
@@ -167,7 +169,7 @@ function MyBooksContent() {
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-[3px] border-black/15 border-t-black rounded-full animate-spin" />
+        <ExLibrisLoader />
       </main>
     )
   }

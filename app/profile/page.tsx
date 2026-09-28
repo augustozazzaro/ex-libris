@@ -29,6 +29,7 @@ type LucideIcon
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import BookCover from '@/components/BookCover'
 
 type StateRow = {
   book_id: string
@@ -557,24 +558,14 @@ export default function ProfilePage() {
             className="exl-glass exl-card p-4 mt-3 flex items-center gap-4 exl-press"
           >
             <div className="w-12 h-[70px] rounded-[10px] overflow-hidden bg-[#d1d1d6] shrink-0">
-              {latestBook.custom_cover_url || latestBook.cover_url ? (
-                <img
-                  src={
-                    latestBook.custom_cover_url ||
-                    latestBook.cover_url ||
-                    ''
-                  }
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <BookOpen
-                    size={20}
-                    className="text-white"
-                  />
-                </div>
-              )}
+              <BookCover
+                title={latestBook.title}
+                authors={latestBook.authors}
+                coverUrl={
+                  latestBook.custom_cover_url ||
+                  latestBook.cover_url
+                }
+              />
             </div>
 
             <div className="flex-1 min-w-0">

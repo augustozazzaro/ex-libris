@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import BookCover from '@/components/BookCover'
 import ReadingStateCard from '@/components/ReadingStateCard'
 
 import {
@@ -431,21 +432,11 @@ export default function BookPage() {
 
                 <div className="aspect-[2/3] rounded-[22px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
 
-                  {cover ? (
-                    <img
-                      src={cover}
-                      alt={book.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen
-                        size={55}
-                        strokeWidth={1.2}
-                        className="text-white"
-                      />
-                    </div>
-                  )}
+                  <BookCover
+                    title={book.title}
+                    authors={book.authors}
+                    coverUrl={cover}
+                  />
 
                 </div>
 

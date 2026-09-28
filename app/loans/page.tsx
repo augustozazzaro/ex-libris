@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import BookCover from '@/components/BookCover'
 
 type Book = {
   id: string
@@ -573,20 +574,11 @@ function LoanCard({
 
       <div className="w-12 h-[70px] rounded-[10px] bg-[#d1d1d6] overflow-hidden shrink-0">
 
-        {cover ? (
-          <img
-            src={cover}
-            alt=""
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <BookOpen
-              size={20}
-              className="text-white"
-            />
-          </div>
-        )}
+        <BookCover
+          title={book?.title ?? 'Libro'}
+          authors={book?.authors}
+          coverUrl={cover}
+        />
 
       </div>
 

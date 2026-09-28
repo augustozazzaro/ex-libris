@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import BookCover from '@/components/BookCover'
 import IsbnScanner from '@/components/IsbnScanner'
 
 type Candidate = {
@@ -895,22 +896,11 @@ export default function AddBookPage() {
 
                     <div className="w-16 h-24 rounded-xl bg-[#d1d1d6] overflow-hidden shrink-0">
 
-                      {result.cover ? (
-                        <img
-                          src={
-                            result.cover
-                          }
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <BookOpen
-                            size={24}
-                            className="text-white"
-                          />
-                        </div>
-                      )}
+                      <BookCover
+                        title={result.title}
+                        authors={result.authors}
+                        coverUrl={result.cover}
+                      />
 
                     </div>
 
@@ -980,19 +970,15 @@ export default function AddBookPage() {
 
             </div>
 
-            {draft.cover && (
-              <div className="w-28 aspect-[2/3] rounded-[15px] overflow-hidden shadow-lg mb-6">
+            <div className="w-28 aspect-[2/3] rounded-[15px] overflow-hidden shadow-lg mb-6">
 
-                <img
-                  src={
-                    draft.cover
-                  }
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+              <BookCover
+                title={draft.title}
+                authors={draft.authors}
+                coverUrl={draft.cover}
+              />
 
-              </div>
-            )}
+            </div>
 
             <div className="space-y-3">
 

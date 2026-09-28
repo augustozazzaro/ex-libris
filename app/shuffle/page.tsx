@@ -25,6 +25,7 @@ import {
 } from 'framer-motion'
 
 import { createClient } from '@/utils/supabase/client'
+import BookCover from '@/components/BookCover'
 
 type Book = {
   id: string
@@ -463,13 +464,6 @@ export default function ShufflePage() {
 
               <div className="absolute inset-0 bg-[#ECE6DA]" />
 
-              {cover && (
-                <img
-                  src={cover}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover scale-110 blur-[28px] opacity-25"
-                />
-              )}
 
               <div className="relative p-6">
 
@@ -477,17 +471,11 @@ export default function ShufflePage() {
 
                   <div className="w-[58%] max-w-[250px] aspect-[2/3] rounded-[20px] overflow-hidden bg-white/50 shadow-[0_16px_40px_rgba(0,0,0,0.20)]">
 
-                    {cover ? (
-                      <img
-                        src={cover}
-                        alt={currentBook.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#5E7FA3] text-white">
-                        <BookOpen size={46} />
-                      </div>
-                    )}
+                    <BookCover
+                      title={currentBook.title}
+                      authors={currentBook.authors}
+                      coverUrl={cover}
+                    />
 
                   </div>
 

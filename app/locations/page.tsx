@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import BookCover from '@/components/BookCover'
 
 type Location = {
   id: string
@@ -574,22 +575,11 @@ export default function LocationsPage() {
 
                           <div className="w-10 h-14 bg-[#d1d1d6] rounded-lg overflow-hidden shrink-0">
 
-                            {cover ? (
-                              <img
-                                src={
-                                  cover
-                                }
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <BookOpen
-                                  size={18}
-                                  className="text-white"
-                                />
-                              </div>
-                            )}
+                            <BookCover
+                              title={book.title}
+                              authors={book.authors}
+                              coverUrl={cover}
+                            />
 
                           </div>
 

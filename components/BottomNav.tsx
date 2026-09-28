@@ -36,13 +36,19 @@ export default function BottomNav() {
     }`
 
   return (
-    <nav className="fixed left-0 right-0 bottom-0 z-50 md:hidden pointer-events-none">
+    <nav
+      className="fixed inset-x-0 z-50 md:hidden pointer-events-none [transform:translate3d(0,0,0)] [backface-visibility:hidden] [will-change:transform]"
+      style={{
+        bottom:
+          'max(8px, env(safe-area-inset-bottom))',
+      }}
+    >
 
-      <div className="px-3 pb-[calc(10px+env(safe-area-inset-bottom))]">
+      <div className="px-2.5">
 
-        <div className="exl-glass-strong rounded-[28px] max-w-[520px] mx-auto px-3 py-2.5 pointer-events-auto">
+        <div className="exl-glass-strong max-w-[520px] mx-auto h-[64px] px-3 pointer-events-auto rounded-[30px] border border-white/50 dark:border-white/10 bg-white/[0.76] dark:bg-[#1c1c1e]/[0.76] backdrop-blur-[28px] shadow-[0_10px_35px_rgba(0,0,0,0.14)]">
 
-          <div className="grid grid-cols-5 items-center">
+          <div className="grid grid-cols-5 items-center h-full">
 
             <Link
               href="/"
@@ -79,7 +85,7 @@ export default function BottomNav() {
 
               <Link
                 href="/add"
-                className="w-[58px] h-[58px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_10px_24px_rgba(0,0,0,0.22)] exl-press -mt-7"
+                className="w-[50px] h-[50px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_8px_20px_rgba(0,0,0,0.20)] exl-press"
               >
                 <ScanBarcode size={27} />
               </Link>

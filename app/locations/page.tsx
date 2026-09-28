@@ -620,10 +620,10 @@ export default function LocationsPage() {
 
           </section>
 
-          <aside>
+          <aside className="fixed left-3 right-3 bottom-[calc(88px+env(safe-area-inset-bottom))] z-40 lg:static">
 
             {selected && (
-              <div className="exl-glass exl-card p-5 lg:sticky lg:top-6">
+              <div className="exl-glass exl-card p-5 max-h-[58dvh] overflow-y-auto shadow-[0_18px_60px_rgba(0,0,0,0.18)] lg:max-h-none lg:overflow-visible lg:shadow-none lg:sticky lg:top-6">
 
                 <div className="flex items-center gap-3">
 

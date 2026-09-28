@@ -26,7 +26,7 @@ import BookCover from '@/components/BookCover'
 import IsbnScanner from '@/components/IsbnScanner'
 
 type Candidate = {
-  source: 'google_books' | 'open_library'
+  source: string
   sourceId?: string
 
   isbn10: string | null
@@ -47,6 +47,14 @@ type Candidate = {
   categories: string[]
   description: string
 
+  series?: string | null
+  translators?: string[]
+  editors?: string[]
+  illustrators?: string[]
+  introductions?: string[]
+  format?: string | null
+  bibliographic_notes?: string | null
+
   cover: string | null
 }
 
@@ -58,10 +66,7 @@ type Location = {
 }
 
 type Draft = {
-  source:
-    | 'google_books'
-    | 'open_library'
-    | 'manual'
+  source: string
 
   isbn10: string
   isbn13: string
@@ -76,6 +81,14 @@ type Draft = {
 
   pages: string
   language: string
+
+  series: string
+  translators: string[]
+  editors: string[]
+  illustrators: string[]
+  introductions: string[]
+  format: string
+  bibliographicNotes: string
 
   cover: string
 
@@ -100,6 +113,14 @@ function emptyDraft(): Draft {
 
     pages: '',
     language: '',
+
+    series: '',
+    translators: [],
+    editors: [],
+    illustrators: [],
+    introductions: [],
+    format: '',
+    bibliographicNotes: '',
 
     cover: '',
 
@@ -255,6 +276,27 @@ export default function AddBookPage() {
 
       language:
         candidate.language ?? '',
+
+      series:
+        candidate.series ?? '',
+
+      translators:
+        candidate.translators ?? [],
+
+      editors:
+        candidate.editors ?? [],
+
+      illustrators:
+        candidate.illustrators ?? [],
+
+      introductions:
+        candidate.introductions ?? [],
+
+      format:
+        candidate.format ?? '',
+
+      bibliographicNotes:
+        candidate.bibliographic_notes ?? '',
 
       cover:
         candidate.cover ?? '',
@@ -549,6 +591,30 @@ export default function AddBookPage() {
 
           language:
             draft.language.trim() ||
+            null,
+
+          series:
+            draft.series.trim() ||
+            null,
+
+          translators:
+            draft.translators,
+
+          editors:
+            draft.editors,
+
+          illustrators:
+            draft.illustrators,
+
+          introductions:
+            draft.introductions,
+
+          format:
+            draft.format.trim() ||
+            null,
+
+          bibliographic_notes:
+            draft.bibliographicNotes.trim() ||
             null,
 
           pages:

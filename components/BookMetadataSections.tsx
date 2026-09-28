@@ -12,8 +12,11 @@ type Props = {
   categories?: string[] | null
   language?: string | null
   publisher?: string | null
+  series?: string | null
+  format?: string | null
   isbn10?: string | null
   isbn13?: string | null
+  bibliographicNotes?: string | null
   notes?: string | null
 }
 
@@ -21,8 +24,11 @@ export default function BookMetadataSections({
   categories,
   language,
   publisher,
+  series,
+  format,
   isbn10,
   isbn13,
+  bibliographicNotes,
   notes,
 }: Props) {
   const cleanCategories =
@@ -32,6 +38,8 @@ export default function BookMetadataSections({
 
   const hasEditorial =
     Boolean(publisher) ||
+    Boolean(series) ||
+    Boolean(format) ||
     Boolean(isbn10) ||
     Boolean(isbn13)
 
@@ -117,6 +125,30 @@ export default function BookMetadataSections({
               </div>
             )}
 
+            {series && (
+              <div className="py-3 flex items-center justify-between gap-4">
+                <span className="text-[#8e8e93] text-sm">
+                  Collana
+                </span>
+
+                <span className="font-medium text-right">
+                  {series}
+                </span>
+              </div>
+            )}
+
+            {format && (
+              <div className="py-3 flex items-center justify-between gap-4">
+                <span className="text-[#8e8e93] text-sm">
+                  Formato
+                </span>
+
+                <span className="font-medium text-right">
+                  {format}
+                </span>
+              </div>
+            )}
+
             {isbn13 && (
               <div className="py-3 flex items-center justify-between gap-4">
                 <span className="text-[#8e8e93] text-sm flex items-center gap-1.5">
@@ -144,6 +176,27 @@ export default function BookMetadataSections({
             )}
 
           </div>
+
+        </section>
+      )}
+
+      {bibliographicNotes && (
+        <section className="exl-glass exl-card p-5">
+
+          <div className="flex items-center gap-2">
+            <NotebookText
+              size={18}
+              className="text-[#5E7FA3]"
+            />
+
+            <h2 className="font-bold text-[18px]">
+              Note sull'edizione
+            </h2>
+          </div>
+
+          <p className="text-[#48484a] dark:text-[#d1d1d6] leading-relaxed mt-3">
+            {bibliographicNotes}
+          </p>
 
         </section>
       )}

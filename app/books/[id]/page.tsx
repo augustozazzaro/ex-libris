@@ -28,6 +28,7 @@ import BookCover from '@/components/BookCover'
 import BookDetailHero from '@/components/BookDetailHero'
 import BookSynopsis from '@/components/BookSynopsis'
 import BookMetadataSections from '@/components/BookMetadataSections'
+import BookContributors from '@/components/BookContributors'
 import ReadingStateCard from '@/components/ReadingStateCard'
 
 import {
@@ -55,6 +56,14 @@ type Book = {
 
   categories: string[] | null
   description: string | null
+
+  series: string | null
+  translators: string[] | null
+  editors: string[] | null
+  illustrators: string[] | null
+  introductions: string[] | null
+  format: string | null
+  bibliographic_notes: string | null
 
   cover_url: string | null
   custom_cover_url: string | null
@@ -441,24 +450,36 @@ export default function BookPage() {
               }
             />
 
-            <BookMetadataSections
-              categories={book.categories}
-              language={book.language}
-              publisher={book.publisher}
-              isbn10={book.isbn_10}
-              isbn13={book.isbn_13}
-              notes={book.notes}
-            />
-
-            <ReadingStateCard
-              bookId={book.id}
-            />
-
             {book.description && (
               <BookSynopsis
                 text={book.description}
               />
             )}
+
+            <ReadingStateCard
+              bookId={book.id}
+            />
+
+            <BookContributors
+              translators={book.translators}
+              editors={book.editors}
+              illustrators={book.illustrators}
+              introductions={book.introductions}
+            />
+
+            <BookMetadataSections
+              categories={book.categories}
+              language={book.language}
+              publisher={book.publisher}
+              series={book.series}
+              format={book.format}
+              isbn10={book.isbn_10}
+              isbn13={book.isbn_13}
+              bibliographicNotes={
+                book.bibliographic_notes
+              }
+              notes={book.notes}
+            />
 
 
           </>

@@ -10,6 +10,16 @@ type Candidate = {
   publishedDate?: string
 
   description?: string
+  bibliographicNotes?: string
+  series?: string
+
+  translators?: string[]
+  editors?: string[]
+  illustrators?: string[]
+  introductions?: string[]
+
+  language?: string
+  format?: string
 
   pages?: number
 
@@ -55,6 +65,198 @@ function cleanSbnText(
     .replace(/[\u0088\u0089]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+
+function cleanContributorName(
+  value: unknown
+) {
+  return cleanSbnText(value)
+    .replace(
+      /^\[[^\]]+\]\s*/,
+      ''
+    )
+    .replace(
+      /\s+/g,
+      ' '
+    )
+    .trim()
+}
+
+function uniqueStrings(
+  values: string[]
+) {
+  const result: string[] = []
+  const seen =
+    new Set<string>()
+
+  function personKey(
+    value: string
+  ) {
+    const clean =
+      value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(
+          /[\\u0300-\\u036f]/g,
+          ''
+        )
+        .replace(
+          /[^a-z0-9]+/g,
+          ' '
+        )
+        .trim()
+
+    const parts =
+      clean
+        .split(' ')
+        .filter(Boolean)
+        .sort()
+
+    return parts.join('|')
+  }
+
+  for (const raw of values) {
+    const value =
+      raw.trim()
+
+    if (!value) continue
+
+    const key =
+      personKey(value)
+
+    if (seen.has(key)) {
+      continue
+    }
+
+    seen.add(key)
+    result.push(value)
+  }
+
+  return result
+}
+
+function taggedSbnNames(
+  names: unknown,
+  role: string
+) {
+  if (!Array.isArray(names)) {
+    return []
+  }
+
+  const prefix =
+    `[${role}]`
+
+  return uniqueStrings(
+    names
+      .filter(
+        (value) =>
+          typeof value === 'string' &&
+          cleanSbnText(value)
+            .toLowerCase()
+            .startsWith(
+              prefix.toLowerCase()
+            )
+      )
+      .map(
+        cleanContributorName
+      )
+  )
+}
+
+function extractRoleNames(
+  title: string,
+  patterns: RegExp[]
+) {
+  const names: string[] = []
+
+  for (const pattern of patterns) {
+    const regex =
+      new RegExp(
+        pattern.source,
+        pattern.flags.includes('g')
+          ? pattern.flags
+          : pattern.flags + 'g'
+      )
+
+    let match:
+      RegExpExecArray | null
+
+    while (
+      (
+        match =
+          regex.exec(title)
+      ) !== null
+    ) {
+      const raw =
+        match[1]
+
+      if (!raw) continue
+
+      const cleaned =
+        cleanSbnText(raw)
+          .replace(
+            /\s+(?:con|with)\s+.*$/i,
+            ''
+          )
+          .trim()
+
+      if (cleaned) {
+        names.push(cleaned)
+      }
+    }
+  }
+
+  return uniqueStrings(names)
+}
+
+function sbnLanguage(
+  value: unknown
+): string | undefined {
+  const raw =
+    Array.isArray(value)
+      ? String(
+          value[0] ?? ''
+        )
+      : typeof value === 'string'
+        ? value
+        : ''
+
+  const code =
+    raw
+      .trim()
+      .toLowerCase()
+
+  const languages:
+    Record<string, string> = {
+      ita: 'Italiano',
+      it: 'Italiano',
+      eng: 'Inglese',
+      en: 'Inglese',
+      fra: 'Francese',
+      fre: 'Francese',
+      fr: 'Francese',
+      deu: 'Tedesco',
+      ger: 'Tedesco',
+      de: 'Tedesco',
+      spa: 'Spagnolo',
+      es: 'Spagnolo',
+      por: 'Portoghese',
+      pt: 'Portoghese',
+      lat: 'Latino',
+      grc: 'Greco antico',
+      gre: 'Greco',
+      ell: 'Greco',
+    }
+
+  if (!code) {
+    return undefined
+  }
+
+  return (
+    languages[code] ??
+    cleanSbnText(raw)
+  )
 }
 
 function isbn10To13(isbn10: string) {
@@ -362,15 +564,84 @@ async function sbn(
         ...(Array.isArray(source.noteGenerali)
           ? source.noteGenerali.map(cleanSbnText)
           : []),
-
-        source.collezione
-          ? `Collana: ${cleanSbnText(source.collezione)}`
-          : null,
       ].filter(
         (value): value is string =>
           typeof value === 'string' &&
           value.trim().length > 0
       )
+
+      const fullTitle =
+        cleanSbnText(
+          record.titolo ??
+          source.titolo ??
+          ''
+        )
+
+      const translators =
+        uniqueStrings([
+          ...taggedSbnNames(
+            source.nomi,
+            'Traduttore'
+          ),
+
+          ...extractRoleNames(
+            fullTitle,
+            [
+              /traduzione\s+(?:di|da)\s+([^;\/]+)/gi,
+              /tradotto\s+(?:da|di)\s+([^;\/]+)/gi,
+              /translated\s+by\s+([^;\/]+)/gi,
+            ]
+          ),
+        ])
+
+      const illustrators =
+        uniqueStrings([
+          ...taggedSbnNames(
+            source.nomi,
+            'Illustratore'
+          ),
+
+          ...extractRoleNames(
+            fullTitle,
+            [
+              /illustrazioni\s+di\s+([^;\/]+)/gi,
+              /illustrato\s+da\s+([^;\/]+)/gi,
+              /illustrations?\s+by\s+([^;\/]+)/gi,
+            ]
+          ),
+        ])
+
+      const editors =
+        extractRoleNames(
+          fullTitle,
+          [
+            /(?:edizione(?:\s+italiana)?\s+)?a\s+cura\s+di\s+([^;\/]+)/gi,
+            /edited\s+by\s+([^;\/]+)/gi,
+          ]
+        )
+
+      const introductions =
+        extractRoleNames(
+          fullTitle,
+          [
+            /introduzione\s+di\s+([^;\/]+)/gi,
+            /prefazione(?:\s+[^;\/]+)?\s+di\s+([^;\/]+)/gi,
+            /with\s+an\s+introduction(?:\s+and\s+notes)?\s+by\s+([^;\/]+)/gi,
+          ]
+        )
+
+      const language =
+        sbnLanguage(
+          source.linguaPubblicazione ??
+          record.linguaPubblicazione
+        )
+
+      const format =
+        cleanSbnText(
+          source.tipo ??
+          record.tipo ??
+          ''
+        ) || undefined
 
       const categories = [
         ...(Array.isArray(source.soggetti)
@@ -401,9 +672,27 @@ async function sbn(
           ),
 
         description:
+          undefined,
+
+        bibliographicNotes:
           descriptionParts.length
             ? descriptionParts.join('\n')
             : undefined,
+
+        series:
+          source.collezione
+            ? cleanSbnText(
+                source.collezione
+              )
+            : undefined,
+
+        translators,
+        editors,
+        illustrators,
+        introductions,
+        language,
+        format,
+
         pages,
         categories,
         isbn10:
@@ -560,6 +849,13 @@ async function googleBooks(
 
         categories:
           info.categories,
+
+        language:
+          info.language
+            ? sbnLanguage(
+                info.language
+              )
+            : undefined,
 
         isbn10:
           found10
@@ -809,6 +1105,113 @@ async function openLibrary(
 }
 
 /* ======================================================
+   APPLE BOOKS
+   ====================================================== */
+
+async function appleBooks(
+  isbn10: string | null,
+  isbn13: string | null
+): Promise<Candidate[]> {
+  const isbn =
+    isbn13 ?? isbn10
+
+  if (!isbn) return []
+
+  const queries = [
+    `https://itunes.apple.com/lookup?isbn=${encodeURIComponent(
+      isbn
+    )}&country=IT&entity=ebook`,
+
+    `https://itunes.apple.com/search?term=${encodeURIComponent(
+      isbn
+    )}&country=IT&media=ebook&entity=ebook&limit=10`,
+  ]
+
+  const results: Candidate[] = []
+
+  for (const url of queries) {
+    const data =
+      await safeFetch(url)
+
+    for (
+      const item of
+        data?.results ?? []
+    ) {
+      const title =
+        item.trackName ??
+        item.collectionName
+
+      if (!title) continue
+
+      const authors =
+        item.artistName
+          ? [item.artistName]
+          : []
+
+      const publishedDate =
+        item.releaseDate
+          ? String(
+              item.releaseDate
+            )
+          : undefined
+
+      const description =
+        stripHtml(
+          item.description
+        )
+
+      const categories =
+        Array.isArray(
+          item.genres
+        )
+          ? item.genres
+          : item.primaryGenreName
+            ? [
+                item.primaryGenreName
+              ]
+            : []
+
+      results.push({
+        source:
+          'Apple Books',
+
+        title,
+
+        authors,
+
+        publisher:
+          item.sellerName ??
+          item.publisher,
+
+        publishedDate,
+
+        description,
+
+        coverUrl:
+          secureImage(
+            item.artworkUrl100 ??
+            item.artworkUrl60
+          ),
+
+        categories,
+
+        isbn10:
+          isbn10 ?? undefined,
+
+        isbn13:
+          isbn13 ?? undefined,
+      })
+    }
+
+    if (results.length) {
+      break
+    }
+  }
+
+  return results
+}
+
+/* ======================================================
    CROSSREF
    ====================================================== */
 
@@ -937,6 +1340,10 @@ function firstString(
     | 'coverUrl'
     | 'isbn10'
     | 'isbn13'
+    | 'series'
+    | 'bibliographicNotes'
+    | 'language'
+    | 'format'
 ) {
   for (
     const candidate of candidates
@@ -949,6 +1356,303 @@ function firstString(
       usefulString(value)
     ) {
       return value.trim()
+    }
+  }
+
+  return null
+}
+
+async function supplementalSynopsis(
+  title: string | null,
+  authors: string[]
+): Promise<string | null> {
+  if (!title) return null
+
+  const author =
+    authors[0] ?? ''
+
+  function normalize(
+    value: string
+  ) {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  }
+
+  const normalizedTitle =
+    normalize(title)
+
+  const authorTokens =
+    normalize(author)
+      .split(' ')
+      .filter(
+        (token) =>
+          token.length >= 4
+      )
+
+  const queries = [
+    [
+      `intitle:${title}`,
+      author
+        ? `inauthor:${author}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
+
+    `${title} ${author}`.trim(),
+
+    title,
+  ]
+
+  type SynopsisCandidate = {
+    text: string
+    score: number
+  }
+
+  const candidates:
+    SynopsisCandidate[] = []
+
+  for (const query of queries) {
+    const google =
+      await safeFetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+          query
+        )}&maxResults=10&projection=full`
+      )
+
+    for (
+      const item of
+        google?.items ?? []
+    ) {
+      const info =
+        item?.volumeInfo ?? {}
+
+      const description =
+        stripHtml(
+          info.description
+        )
+
+      if (
+        !description ||
+        description.length < 120
+      ) {
+        continue
+      }
+
+      const candidateTitle =
+        normalize(
+          info.title ?? ''
+        )
+
+      const titleMatches =
+        candidateTitle.includes(
+          normalizedTitle
+        ) ||
+        normalizedTitle.includes(
+          candidateTitle
+        )
+
+      if (!titleMatches) {
+        continue
+      }
+
+      const candidateAuthors =
+        Array.isArray(info.authors)
+          ? info.authors
+              .map(
+                (value: string) =>
+                  normalize(value)
+              )
+              .join(' ')
+          : ''
+
+      const authorMatches =
+        authorTokens.length === 0 ||
+        authorTokens.some(
+          (token) =>
+            candidateAuthors.includes(
+              token
+            )
+        )
+
+      if (!authorMatches) {
+        continue
+      }
+
+      let score =
+        description.length
+
+      if (
+        info.language === 'it'
+      ) {
+        score += 10000
+      }
+
+      if (
+        candidateTitle ===
+        normalizedTitle
+      ) {
+        score += 3000
+      }
+
+      candidates.push({
+        text: description,
+        score,
+      })
+    }
+  }
+
+  if (candidates.length) {
+    candidates.sort(
+      (a, b) =>
+        b.score - a.score
+    )
+
+    return candidates[0].text
+  }
+
+  const appleQuery =
+    [
+      title,
+      author,
+    ]
+      .filter(Boolean)
+      .join(' ')
+
+  const apple =
+    await safeFetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(
+        appleQuery
+      )}&country=IT&media=ebook&entity=ebook&limit=10`
+    )
+
+  const appleCandidates:
+    {
+      text: string
+      score: number
+    }[] = []
+
+  for (
+    const item of
+      apple?.results ?? []
+  ) {
+    const description =
+      stripHtml(
+        item.description
+      )
+
+    if (
+      !description ||
+      description.length < 120
+    ) {
+      continue
+    }
+
+    const candidateTitle =
+      normalize(
+        item.trackName ??
+        item.collectionName ??
+        ''
+      )
+
+    const titleMatches =
+      candidateTitle.includes(
+        normalizedTitle
+      ) ||
+      normalizedTitle.includes(
+        candidateTitle
+      )
+
+    if (!titleMatches) {
+      continue
+    }
+
+    const candidateAuthor =
+      normalize(
+        item.artistName ?? ''
+      )
+
+    const authorMatches =
+      authorTokens.length === 0 ||
+      authorTokens.some(
+        (token) =>
+          candidateAuthor.includes(
+            token
+          )
+      )
+
+    if (!authorMatches) {
+      continue
+    }
+
+    let score =
+      description.length
+
+    if (
+      candidateTitle ===
+      normalizedTitle
+    ) {
+      score += 3000
+    }
+
+    appleCandidates.push({
+      text: description,
+      score,
+    })
+  }
+
+  if (appleCandidates.length) {
+    appleCandidates.sort(
+      (a, b) =>
+        b.score - a.score
+    )
+
+    return appleCandidates[0].text
+  }
+
+  const openLibrary =
+    await safeFetch(
+      `https://openlibrary.org/search.json?title=${encodeURIComponent(
+        title
+      )}${
+        author
+          ? `&author=${encodeURIComponent(
+              author
+            )}`
+          : ''
+      }&limit=10`
+    )
+
+  for (
+    const doc of
+      openLibrary?.docs ?? []
+  ) {
+    const workKey =
+      doc.key
+
+    if (!workKey) continue
+
+    const work =
+      await safeFetch(
+        `https://openlibrary.org${workKey}.json`
+      )
+
+    const description =
+      stripHtml(
+        textFromDescription(
+          work?.description
+        )
+      )
+
+    if (
+      description &&
+      description.length > 120
+    ) {
+      return description
     }
   }
 
@@ -968,8 +1672,13 @@ function longestDescription(
         (
           value
         ): value is string =>
-          Boolean(
-            value?.trim()
+          typeof value === 'string' &&
+          value.trim().length > 120 &&
+          !/^collana:/i.test(
+            value.trim()
+          ) &&
+          !/^in cop\.?/i.test(
+            value.trim()
           )
       )
 
@@ -996,6 +1705,22 @@ function bestAuthors(
   }
 
   return []
+}
+
+function mergeStringArrays(
+  candidates: Candidate[],
+  key:
+    | 'translators'
+    | 'editors'
+    | 'illustrators'
+    | 'introductions'
+) {
+  return uniqueStrings(
+    candidates.flatMap(
+      (candidate) =>
+        candidate[key] ?? []
+    )
+  )
 }
 
 function bestPages(
@@ -1107,11 +1832,17 @@ export async function GET(
 
   const [
     google,
+    appleResults,
     openLibraryResults,
     crossrefResults,
     sbnResults,
   ] = await Promise.all([
     googleBooks(
+      isbn10,
+      isbn13
+    ),
+
+    appleBooks(
       isbn10,
       isbn13
     ),
@@ -1142,6 +1873,7 @@ export async function GET(
 
   const candidates = [
     ...google,
+    ...appleResults,
     ...openLibraryResults,
     ...sbnResults,
     ...crossrefResults,
@@ -1172,6 +1904,7 @@ export async function GET(
 
         sources_checked: [
           'Google Books',
+          'Apple Books',
           'Open Library',
           'SBN',
           'Crossref',
@@ -1211,9 +1944,68 @@ export async function GET(
       'coverUrl'
     )
 
-  const description =
-    longestDescription(
-      meaningful
+  let description:
+    string | null =
+      longestDescription(
+        meaningful
+      )
+
+  if (!description) {
+    description =
+      await supplementalSynopsis(
+        title,
+        bestAuthors(
+          meaningful
+        )
+      )
+  }
+
+  const series =
+    firstString(
+      meaningful,
+      'series'
+    )
+
+  const bibliographicNotes =
+    firstString(
+      meaningful,
+      'bibliographicNotes'
+    )
+
+  const translators =
+    mergeStringArrays(
+      meaningful,
+      'translators'
+    )
+
+  const editors =
+    mergeStringArrays(
+      meaningful,
+      'editors'
+    )
+
+  const illustrators =
+    mergeStringArrays(
+      meaningful,
+      'illustrators'
+    )
+
+  const introductions =
+    mergeStringArrays(
+      meaningful,
+      'introductions'
+    )
+
+  const language =
+    firstString(
+      meaningful,
+      'language'
+    )
+
+  const format =
+    firstString(
+      meaningful,
+      'format'
     )
 
   const pages =
@@ -1271,6 +2063,24 @@ export async function GET(
         : null,
 
     description,
+
+    synopsis:
+      description,
+
+    series,
+
+    translators,
+    editors,
+    illustrators,
+
+    introductions,
+
+    language,
+
+    format,
+
+    bibliographic_notes:
+      bibliographicNotes,
 
     pages,
 

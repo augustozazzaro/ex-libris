@@ -5,6 +5,8 @@ import {
 } from 'framer-motion'
 
 import {
+  ArrowUpRight,
+  House,
   MapPin,
 } from 'lucide-react'
 
@@ -22,19 +24,6 @@ type Props = {
   locationPath?: string | null
 }
 
-function statusLabel(
-  status?: string | null
-) {
-  switch (status) {
-    case 'home':
-      return 'A casa'
-    case 'loaned':
-      return 'In prestito'
-    default:
-      return status || null
-  }
-}
-
 export default function BookDetailHero({
   title,
   subtitle,
@@ -46,6 +35,9 @@ export default function BookDetailHero({
   coverUrl,
   locationPath,
 }: Props) {
+  const loaned =
+    status === 'loaned'
+
   return (
     <section className="relative overflow-hidden rounded-[32px] mt-6">
 
@@ -54,18 +46,41 @@ export default function BookDetailHero({
       {coverUrl && (
         <>
           <div
-            className="absolute inset-[-40px] bg-cover bg-center scale-110 blur-[38px] opacity-35"
+            className="absolute inset-[-45px] bg-cover bg-center scale-110 blur-[42px] opacity-35"
             style={{
               backgroundImage:
                 `url("${coverUrl}")`,
             }}
           />
 
-          <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-white/45 to-[#f4f1eb]/95 dark:from-black/10 dark:via-black/40 dark:to-[#1c1c1e]/95" />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/50 to-[#f4f1eb]/95 dark:from-black/5 dark:via-black/40 dark:to-[#1c1c1e]/95" />
         </>
       )}
 
-      <div className="relative px-5 pt-8 pb-6 md:px-8 md:pt-10">
+      <div className="relative px-5 pt-7 pb-6 md:px-8 md:pt-9">
+
+        <div className="absolute top-4 right-4">
+
+          <div
+            className="w-10 h-10 rounded-full bg-white/60 dark:bg-black/25 backdrop-blur-xl border border-white/50 dark:border-white/10 flex items-center justify-center shadow-sm"
+            title={
+              loaned
+                ? 'In prestito'
+                : 'A casa'
+            }
+          >
+            {loaned ? (
+              <ArrowUpRight
+                size={18}
+              />
+            ) : (
+              <House
+                size={18}
+              />
+            )}
+          </div>
+
+        </div>
 
         <motion.div
           initial={{
@@ -83,7 +98,7 @@ export default function BookDetailHero({
             stiffness: 250,
             damping: 24,
           }}
-          className="w-[148px] md:w-[190px] aspect-[2/3] rounded-[18px] overflow-hidden shadow-[0_18px_55px_rgba(0,0,0,0.24)] mx-auto"
+          className="w-[145px] md:w-[188px] aspect-[2/3] rounded-[18px] overflow-hidden shadow-[0_18px_55px_rgba(0,0,0,0.24)] mx-auto"
         >
           <BookCover
             title={title}
@@ -113,7 +128,7 @@ export default function BookDetailHero({
           </h1>
 
           {subtitle && (
-            <p className="text-[#636366] dark:text-[#aeaeb2] text-[17px] mt-2">
+            <p className="text-[#636366] dark:text-[#aeaeb2] text-[16px] mt-2">
               {subtitle}
             </p>
           )}
@@ -125,18 +140,19 @@ export default function BookDetailHero({
           ) : null}
 
           {publisher && (
-            <p className="text-[#8e8e93] text-[16px] mt-1">
+            <p className="text-[#8e8e93] text-[15px] mt-1">
               {publisher}
             </p>
           )}
 
-          <div className="flex items-center justify-center gap-7 mt-6">
+          <div className="flex items-center justify-center gap-8 mt-5">
 
             {publicationYear && (
               <div className="text-center">
-                <p className="text-[#8e8e93] text-[11px] uppercase tracking-[0.08em]">
+                <p className="text-[#8e8e93] text-[10px] uppercase tracking-[0.08em]">
                   Anno
                 </p>
+
                 <p className="font-semibold text-[17px] mt-0.5">
                   {publicationYear}
                 </p>
@@ -145,9 +161,10 @@ export default function BookDetailHero({
 
             {pages && (
               <div className="text-center">
-                <p className="text-[#8e8e93] text-[11px] uppercase tracking-[0.08em]">
+                <p className="text-[#8e8e93] text-[10px] uppercase tracking-[0.08em]">
                   Pagine
                 </p>
+
                 <p className="font-semibold text-[17px] mt-0.5">
                   {pages}
                 </p>
@@ -156,27 +173,20 @@ export default function BookDetailHero({
 
           </div>
 
-          <div className="flex flex-wrap justify-center gap-2 mt-6">
+          {locationPath && (
+            <div className="mt-5 flex items-center justify-center gap-1.5 text-[#636366] dark:text-[#c7c7cc] text-[13px]">
 
-            {statusLabel(status) && (
-              <span className="bg-white/55 dark:bg-white/10 backdrop-blur-xl rounded-full px-3.5 py-2 text-sm font-medium border border-white/50 dark:border-white/10">
-                {statusLabel(status)}
+              <MapPin
+                size={14}
+                className="shrink-0"
+              />
+
+              <span className="truncate">
+                {locationPath}
               </span>
-            )}
 
-            {locationPath && (
-              <span className="bg-white/55 dark:bg-white/10 backdrop-blur-xl rounded-full px-3.5 py-2 text-sm font-medium border border-white/50 dark:border-white/10 flex items-center gap-1.5 max-w-full">
-                <MapPin
-                  size={15}
-                  className="shrink-0"
-                />
-                <span className="truncate">
-                  {locationPath}
-                </span>
-              </span>
-            )}
-
-          </div>
+            </div>
+          )}
 
         </motion.div>
 

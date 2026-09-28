@@ -6,7 +6,7 @@ import {
 
 import {
   ArrowUpRight,
-  House,
+  BookCheck,
   MapPin,
 } from 'lucide-react'
 
@@ -59,26 +59,38 @@ export default function BookDetailHero({
 
       <div className="relative px-5 pt-7 pb-6 md:px-8 md:pt-9">
 
-        <div className="absolute top-4 right-4">
+        <div
+          className="absolute top-5 right-5 flex items-center gap-1.5 text-black/55 dark:text-white/60 pointer-events-none select-none"
+          aria-label={
+            loaned
+              ? 'In prestito'
+              : 'Nella tua biblioteca'
+          }
+        >
 
-          <div
-            className="w-10 h-10 rounded-full bg-white/60 dark:bg-black/25 backdrop-blur-xl border border-white/50 dark:border-white/10 flex items-center justify-center shadow-sm"
-            title={
-              loaned
-                ? 'In prestito'
-                : 'A casa'
-            }
-          >
-            {loaned ? (
+          {loaned ? (
+            <>
               <ArrowUpRight
-                size={18}
+                size={15}
+                strokeWidth={1.8}
               />
-            ) : (
-              <House
-                size={18}
+
+              <span className="text-[11px] font-medium">
+                In prestito
+              </span>
+            </>
+          ) : (
+            <>
+              <BookCheck
+                size={15}
+                strokeWidth={1.8}
               />
-            )}
-          </div>
+
+              <span className="text-[11px] font-medium">
+                Nella tua biblioteca
+              </span>
+            </>
+          )}
 
         </div>
 

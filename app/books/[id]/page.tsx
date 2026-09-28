@@ -369,15 +369,40 @@ export default function BookPage() {
       return
     }
 
+    if (
+      !file.type.startsWith('image/')
+    ) {
+      setError(
+        'Il file selezionato non è un’immagine.'
+      )
+      setUploadingCover(false)
+      return
+    }
+
+    if (
+      file.size >
+      10 * 1024 * 1024
+    ) {
+      setError(
+        'L’immagine supera il limite di 10 MB.'
+      )
+      setUploadingCover(false)
+      return
+    }
+
     const extension =
       file.name
         .split('.')
         .pop()
-        ?.toLowerCase() ||
+        ?.toLowerCase()
+        .replace(
+          /[^a-z0-9]/g,
+          ''
+        ) ||
       'jpg'
 
     const path =
-      `${user.id}/${book.id}/cover.${extension}`
+      `${user.id}/${book.id}/${Date.now()}.${extension}`
 
     const { error: uploadError } =
       await supabase.storage
@@ -443,8 +468,71 @@ export default function BookPage() {
 
     if (!url) return
 
+    let parsedUrl: URL
+
+    try {
+      parsedUrl =
+        new URL(url)
+    } catch {
+      setError(
+        'Inserisci un URL valido.'
+      )
+      return
+    }
+
+    if (
+      parsedUrl.protocol !== 'https:' &&
+      parsedUrl.protocol !== 'http:'
+    ) {
+      setError(
+        'L’URL deve iniziare con http:// o https://.'
+      )
+      return
+    }
+
     setUploadingCover(true)
     setError('')
+
+    const imageWorks =
+      await new Promise<boolean>(
+        resolve => {
+          const image =
+            new Image()
+
+          const timeout =
+            window.setTimeout(
+              () => {
+                image.src = ''
+                resolve(false)
+              },
+              7000
+            )
+
+          image.onload = () => {
+            window.clearTimeout(
+              timeout
+            )
+            resolve(true)
+          }
+
+          image.onerror = () => {
+            window.clearTimeout(
+              timeout
+            )
+            resolve(false)
+          }
+
+          image.src = url
+        }
+      )
+
+    if (!imageWorks) {
+      setError(
+        'Questo indirizzo non sembra essere un’immagine utilizzabile. Incolla il link diretto al file della copertina.'
+      )
+      setUploadingCover(false)
+      return
+    }
 
     const { error } =
       await supabase
@@ -943,6 +1031,12 @@ export default function BookPage() {
                   </div>
 
                 </div>
+
+                {error && (
+                  <div className="rounded-2xl bg-red-500/10 px-4 py-3 text-red-600 dark:text-red-400 text-[13px] leading-snug">
+                    {error}
+                  </div>
+                )}
 
                 {customCover && (
                   <button

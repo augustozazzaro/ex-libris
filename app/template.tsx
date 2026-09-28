@@ -20,17 +20,15 @@ export default function Template({
   return (
     <motion.div
       initial={{
-        opacity: 0,
-        y: 7,
-        scale: 0.997,
+        opacity: 0.985,
+        y: 3,
       }}
       animate={{
         opacity: 1,
         y: 0,
-        scale: 1,
       }}
       transition={{
-        duration: 0.24,
+        duration: 0.16,
         ease: [
           0.22,
           1,

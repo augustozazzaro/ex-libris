@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 import {
   motion,
@@ -37,6 +38,7 @@ type Book = {
 
 export default function Home() {
   const supabase = createClient()
+  const router = useRouter()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -130,6 +132,21 @@ export default function Home() {
 
   useEffect(() => {
     loadLibrary()
+
+    const routes = [
+      '/catalog',
+      '/favorites',
+      '/loans',
+      '/shuffle',
+      '/profile',
+      '/settings',
+      '/add',
+    ]
+
+    routes.forEach(
+      route =>
+        router.prefetch(route)
+    )
   }, [])
 
   async function handleLogin(
@@ -321,11 +338,10 @@ export default function Home() {
         <section className="grid grid-cols-2 gap-3 mt-5">
 
           <motion.div
-            initial={{ opacity: 0, y: 14, scale: 0.985 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ y: 5, scale: 0.995 }}
+            animate={{ y: 0, scale: 1 }}
             transition={{
-              delay: 0.04,
-              duration: 0.38,
+              duration: 0.22,
               ease: [0.22, 1, 0.36, 1],
             }}
             className="col-span-2"
@@ -367,11 +383,10 @@ export default function Home() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 14, scale: 0.985 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ y: 5, scale: 0.995 }}
+            animate={{ y: 0, scale: 1 }}
             transition={{
-              delay: 0.10,
-              duration: 0.38,
+              duration: 0.22,
               ease: [0.22, 1, 0.36, 1],
             }}
           >
@@ -404,11 +419,10 @@ export default function Home() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 14, scale: 0.985 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ y: 5, scale: 0.995 }}
+            animate={{ y: 0, scale: 1 }}
             transition={{
-              delay: 0.16,
-              duration: 0.38,
+              duration: 0.22,
               ease: [0.22, 1, 0.36, 1],
             }}
           >
@@ -472,22 +486,15 @@ export default function Home() {
                 <motion.div
                   key={book.id}
                   initial={{
-                    opacity: 0,
-                    x: 12,
-                    scale: 0.97,
+                    x: 5,
+                    scale: 0.99,
                   }}
                   animate={{
-                    opacity: 1,
                     x: 0,
                     scale: 1,
                   }}
                   transition={{
-                    delay:
-                      Math.min(
-                        index * 0.045,
-                        0.25
-                      ),
-                    duration: 0.34,
+                    duration: 0.20,
                     ease: [
                       0.22,
                       1,

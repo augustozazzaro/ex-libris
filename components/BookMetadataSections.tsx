@@ -1,11 +1,12 @@
 'use client'
 
 import {
+  Barcode,
   BookMarked,
+  FileText,
   Languages,
   LibraryBig,
   NotebookText,
-  Barcode,
 } from 'lucide-react'
 
 type Props = {
@@ -32,171 +33,194 @@ export default function BookMetadataSections({
   notes,
 }: Props) {
   const cleanCategories =
-    (categories ?? [])
-      .filter(Boolean)
+    [...new Set(
+      (categories ?? [])
+        .map(
+          category =>
+            category.trim()
+        )
+        .filter(Boolean)
+    )]
       .slice(0, 8)
 
-  const hasEditorial =
+  const hasEdition =
     Boolean(publisher) ||
     Boolean(series) ||
+    Boolean(language) ||
     Boolean(format) ||
-    Boolean(isbn10) ||
-    Boolean(isbn13)
+    Boolean(isbn13) ||
+    Boolean(isbn10)
+
+  const hasDetails =
+    hasEdition ||
+    cleanCategories.length > 0 ||
+    Boolean(bibliographicNotes)
+
+  if (
+    !hasDetails &&
+    !notes
+  ) {
+    return null
+  }
 
   return (
-    <div className="space-y-3 mt-5">
+    <div className="mt-5 space-y-3">
 
-      {cleanCategories.length > 0 && (
-        <section className="exl-glass exl-card p-5">
+      {hasDetails && (
+        <section className="exl-glass exl-card overflow-hidden">
 
-          <div className="flex items-center gap-2">
-            <BookMarked
-              size={18}
-              className="text-[#5E7FA3]"
-            />
+          <div className="p-5 pb-4">
 
-            <h2 className="font-bold text-[18px]">
-              Generi
+            <p className="text-[#8e8e93] text-xs">
+              Informazioni bibliografiche
+            </p>
+
+            <h2 className="text-[20px] font-bold tracking-[-0.025em] mt-0.5">
+              Dettagli del libro
             </h2>
+
           </div>
 
-          <div className="flex flex-wrap gap-2 mt-4">
-            {cleanCategories.map(
-              (category) => (
-                <span
-                  key={category}
-                  className="px-3 py-1.5 rounded-full bg-black/5 dark:bg-white/10 text-[13px]"
-                >
-                  {category}
-                </span>
-              )
-            )}
-          </div>
+          {hasEdition && (
+            <div className="mx-5 border-t border-black/5 dark:border-white/10">
 
-        </section>
-      )}
+              <div className="flex items-center gap-2 pt-4 pb-1">
 
-      {language && (
-        <section className="exl-glass exl-card p-5">
+                <LibraryBig
+                  size={16}
+                  className="text-[#5E7FA3]"
+                />
 
-          <div className="flex items-center gap-2">
-            <Languages
-              size={18}
-              className="text-[#5E7FA3]"
-            />
+                <p className="font-semibold text-[15px]">
+                  Edizione
+                </p>
 
-            <h2 className="font-bold text-[18px]">
-              Lingua
-            </h2>
-          </div>
-
-          <p className="mt-3 text-[#48484a] dark:text-[#d1d1d6]">
-            {language}
-          </p>
-
-        </section>
-      )}
-
-      {hasEditorial && (
-        <section className="exl-glass exl-card p-5">
-
-          <div className="flex items-center gap-2">
-            <LibraryBig
-              size={18}
-              className="text-[#5E7FA3]"
-            />
-
-            <h2 className="font-bold text-[18px]">
-              Edizione
-            </h2>
-          </div>
-
-          <div className="divide-y divide-black/5 dark:divide-white/10 mt-3">
-
-            {publisher && (
-              <div className="py-3 flex items-center justify-between gap-4">
-                <span className="text-[#8e8e93] text-sm">
-                  Editore
-                </span>
-
-                <span className="font-medium text-right">
-                  {publisher}
-                </span>
               </div>
-            )}
 
-            {series && (
-              <div className="py-3 flex items-center justify-between gap-4">
-                <span className="text-[#8e8e93] text-sm">
-                  Collana
-                </span>
+              <div className="divide-y divide-black/5 dark:divide-white/10">
 
-                <span className="font-medium text-right">
-                  {series}
-                </span>
+                {publisher && (
+                  <DetailRow
+                    label="Editore"
+                    value={publisher}
+                  />
+                )}
+
+                {series && (
+                  <DetailRow
+                    label="Collana"
+                    value={series}
+                  />
+                )}
+
+                {(language || format) && (
+                  <div className="py-3 flex items-center justify-between gap-4">
+
+                    <div className="flex items-center gap-1.5 text-[#8e8e93] text-sm">
+                      <Languages size={14} />
+                      Lingua · formato
+                    </div>
+
+                    <p className="font-medium text-right text-[14px]">
+                      {[
+                        language,
+                        format,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+
+                  </div>
+                )}
+
+                {(isbn13 || isbn10) && (
+                  <div className="py-3 flex items-start justify-between gap-4">
+
+                    <div className="flex items-center gap-1.5 text-[#8e8e93] text-sm shrink-0">
+                      <Barcode size={14} />
+                      ISBN
+                    </div>
+
+                    <div className="text-right min-w-0">
+
+                      {isbn13 && (
+                        <p className="font-medium text-[13px] break-all">
+                          {isbn13}
+                        </p>
+                      )}
+
+                      {isbn10 && (
+                        <p className="text-[#8e8e93] text-[12px] break-all mt-0.5">
+                          {isbn10}
+                        </p>
+                      )}
+
+                    </div>
+
+                  </div>
+                )}
+
               </div>
-            )}
 
-            {format && (
-              <div className="py-3 flex items-center justify-between gap-4">
-                <span className="text-[#8e8e93] text-sm">
-                  Formato
-                </span>
+            </div>
+          )}
 
-                <span className="font-medium text-right">
-                  {format}
-                </span>
+          {cleanCategories.length > 0 && (
+            <div className="mx-5 border-t border-black/5 dark:border-white/10 py-4">
+
+              <div className="flex items-center gap-2">
+
+                <BookMarked
+                  size={16}
+                  className="text-[#5E7FA3]"
+                />
+
+                <p className="font-semibold text-[15px]">
+                  Generi
+                </p>
+
               </div>
-            )}
 
-            {isbn13 && (
-              <div className="py-3 flex items-center justify-between gap-4">
-                <span className="text-[#8e8e93] text-sm flex items-center gap-1.5">
-                  <Barcode size={15} />
-                  ISBN 13
-                </span>
+              <div className="flex flex-wrap gap-2 mt-3">
 
-                <span className="font-medium text-right break-all">
-                  {isbn13}
-                </span>
+                {cleanCategories.map(
+                  category => (
+                    <span
+                      key={category}
+                      className="px-3 py-1.5 rounded-full bg-black/[0.045] dark:bg-white/[0.08] text-[12px] leading-tight"
+                    >
+                      {category}
+                    </span>
+                  )
+                )}
+
               </div>
-            )}
 
-            {isbn10 && (
-              <div className="py-3 flex items-center justify-between gap-4">
-                <span className="text-[#8e8e93] text-sm flex items-center gap-1.5">
-                  <Barcode size={15} />
-                  ISBN 10
-                </span>
+            </div>
+          )}
 
-                <span className="font-medium text-right break-all">
-                  {isbn10}
-                </span>
+          {bibliographicNotes && (
+            <div className="mx-5 border-t border-black/5 dark:border-white/10 py-4">
+
+              <div className="flex items-center gap-2">
+
+                <FileText
+                  size={16}
+                  className="text-[#5E7FA3]"
+                />
+
+                <p className="font-semibold text-[15px]">
+                  Note sull'edizione
+                </p>
+
               </div>
-            )}
 
-          </div>
+              <p className="text-[#636366] dark:text-[#c7c7cc] text-[13px] leading-relaxed mt-2">
+                {bibliographicNotes}
+              </p>
 
-        </section>
-      )}
-
-      {bibliographicNotes && (
-        <section className="exl-glass exl-card p-5">
-
-          <div className="flex items-center gap-2">
-            <NotebookText
-              size={18}
-              className="text-[#5E7FA3]"
-            />
-
-            <h2 className="font-bold text-[18px]">
-              Note sull'edizione
-            </h2>
-          </div>
-
-          <p className="text-[#48484a] dark:text-[#d1d1d6] leading-relaxed mt-3">
-            {bibliographicNotes}
-          </p>
+            </div>
+          )}
 
         </section>
       )}
@@ -205,22 +229,54 @@ export default function BookMetadataSections({
         <section className="exl-glass exl-card p-5">
 
           <div className="flex items-center gap-2">
+
             <NotebookText
-              size={18}
+              size={17}
               className="text-[#5E7FA3]"
             />
 
-            <h2 className="font-bold text-[18px]">
-              Note
-            </h2>
+            <div>
+
+              <p className="text-[#8e8e93] text-xs">
+                Personali
+              </p>
+
+              <h2 className="font-bold text-[18px]">
+                Note
+              </h2>
+
+            </div>
+
           </div>
 
-          <p className="text-[#48484a] dark:text-[#d1d1d6] whitespace-pre-wrap leading-relaxed mt-3">
+          <p className="text-[#48484a] dark:text-[#d1d1d6] whitespace-pre-wrap leading-relaxed text-[14px] mt-3">
             {notes}
           </p>
 
         </section>
       )}
+
+    </div>
+  )
+}
+
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="py-3 flex items-start justify-between gap-4">
+
+      <span className="text-[#8e8e93] text-sm shrink-0">
+        {label}
+      </span>
+
+      <span className="font-medium text-right text-[14px]">
+        {value}
+      </span>
 
     </div>
   )

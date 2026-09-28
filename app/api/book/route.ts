@@ -253,9 +253,23 @@ function sbnLanguage(
     return undefined
   }
 
-  return (
-    languages[code] ??
+  const mapped =
+    languages[code]
+
+  if (mapped) {
+    return mapped
+  }
+
+  const cleaned =
     cleanSbnText(raw)
+
+  if (!cleaned) {
+    return undefined
+  }
+
+  return (
+    cleaned.charAt(0).toUpperCase() +
+    cleaned.slice(1).toLowerCase()
   )
 }
 
@@ -1671,15 +1685,29 @@ function longestDescription(
       .filter(
         (
           value
-        ): value is string =>
-          typeof value === 'string' &&
-          value.trim().length > 120 &&
-          !/^collana:/i.test(
+        ): value is string => {
+          if (
+            typeof value !== 'string'
+          ) {
+            return false
+          }
+
+          const text =
             value.trim()
-          ) &&
-          !/^in cop\.?/i.test(
-            value.trim()
+
+          if (
+            text.length < 120
+          ) {
+            return false
+          }
+
+          const catalogNote =
+            /^(collana|in cop\.?|in copertina|sul verso|titolo originale|traduzione|edizione|testo greco|testo inglese|contiene):/i
+
+          return !catalogNote.test(
+            text
           )
+        }
       )
 
   descriptions.sort(

@@ -57,7 +57,7 @@ export default function BookContributors({
   }
 
   return (
-    <section className="exl-glass exl-card p-5 mt-5">
+    <section className="exl-glass exl-card px-5 py-4 mt-5">
 
       <p className="text-[#8e8e93] text-xs">
         Questa edizione
@@ -77,10 +77,10 @@ export default function BookContributors({
           }) => (
             <div
               key={role}
-              className="flex items-start gap-3 py-3.5"
+              className="flex items-start gap-3 py-3"
             >
 
-              <div className="w-9 h-9 rounded-[12px] bg-[#5E7FA3]/12 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-[11px] bg-[#5E7FA3]/12 flex items-center justify-center shrink-0">
                 <Icon
                   size={17}
                   className="text-[#5E7FA3]"

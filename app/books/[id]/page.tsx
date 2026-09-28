@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  ChangeEvent,
   useEffect,
   useState,
 } from 'react'
@@ -126,6 +127,44 @@ export default function BookPage() {
   const [notes, setNotes] =
     useState('')
 
+
+  const [language, setLanguage] =
+    useState('')
+
+  const [series, setSeries] =
+    useState('')
+
+  const [format, setFormat] =
+    useState('')
+
+  const [description, setDescription] =
+    useState('')
+
+  const [translators, setTranslators] =
+    useState('')
+
+  const [editors, setEditors] =
+    useState('')
+
+  const [illustrators, setIllustrators] =
+    useState('')
+
+  const [introductions, setIntroductions] =
+    useState('')
+
+  const [bibliographicNotes, setBibliographicNotes] =
+    useState('')
+
+
+  const [customCover, setCustomCover] =
+    useState('')
+
+  const [coverUrlInput, setCoverUrlInput] =
+    useState('')
+
+  const [uploadingCover, setUploadingCover] =
+    useState(false)
+
   async function loadBook() {
     setLoading(true)
 
@@ -176,6 +215,56 @@ export default function BookPage() {
 
     setPublisher(
       data.publisher ?? ''
+    )
+
+
+    setLanguage(
+      data.language ?? ''
+    )
+
+    setSeries(
+      data.series ?? ''
+    )
+
+    setFormat(
+      data.format ?? ''
+    )
+
+    setDescription(
+      data.description ?? ''
+    )
+
+    setTranslators(
+      data.translators?.join(', ') ??
+        ''
+    )
+
+    setEditors(
+      data.editors?.join(', ') ??
+        ''
+    )
+
+    setIllustrators(
+      data.illustrators?.join(', ') ??
+        ''
+    )
+
+    setIntroductions(
+      data.introductions?.join(', ') ??
+        ''
+    )
+
+    setBibliographicNotes(
+      data.bibliographic_notes ?? ''
+    )
+
+
+    setCustomCover(
+      data.custom_cover_url ?? ''
+    )
+
+    setCoverUrlInput(
+      data.custom_cover_url ?? ''
     )
 
     setPublicationYear(
@@ -259,11 +348,175 @@ export default function BookPage() {
     }
   }
 
+  async function uploadBookCover(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const file =
+      event.target.files?.[0]
+
+    if (!file || !book) return
+
+    setUploadingCover(true)
+    setError('')
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setError('Utente non autenticato.')
+      setUploadingCover(false)
+      return
+    }
+
+    const extension =
+      file.name
+        .split('.')
+        .pop()
+        ?.toLowerCase() ||
+      'jpg'
+
+    const path =
+      `${user.id}/${book.id}/cover.${extension}`
+
+    const { error: uploadError } =
+      await supabase.storage
+        .from('book-covers')
+        .upload(
+          path,
+          file,
+          {
+            upsert: true,
+            cacheControl: '3600',
+          }
+        )
+
+    if (uploadError) {
+      setError(
+        uploadError.message
+      )
+      setUploadingCover(false)
+      return
+    }
+
+    const { data } =
+      supabase.storage
+        .from('book-covers')
+        .getPublicUrl(path)
+
+    const url =
+      `${data.publicUrl}?v=${Date.now()}`
+
+    const { error: updateError } =
+      await supabase
+        .from('books')
+        .update({
+          custom_cover_url:
+            url,
+        })
+        .eq('id', book.id)
+
+    if (updateError) {
+      setError(
+        updateError.message
+      )
+    } else {
+      setCustomCover(url)
+      setCoverUrlInput(url)
+
+      setBook({
+        ...book,
+        custom_cover_url:
+          url,
+      })
+    }
+
+    event.target.value = ''
+    setUploadingCover(false)
+  }
+
+  async function saveCoverUrl() {
+    if (!book) return
+
+    const url =
+      coverUrlInput.trim()
+
+    if (!url) return
+
+    setUploadingCover(true)
+    setError('')
+
+    const { error } =
+      await supabase
+        .from('books')
+        .update({
+          custom_cover_url:
+            url,
+        })
+        .eq('id', book.id)
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setCustomCover(url)
+
+      setBook({
+        ...book,
+        custom_cover_url:
+          url,
+      })
+    }
+
+    setUploadingCover(false)
+  }
+
+  async function restoreOriginalCover() {
+    if (!book) return
+
+    setUploadingCover(true)
+    setError('')
+
+    const { error } =
+      await supabase
+        .from('books')
+        .update({
+          custom_cover_url:
+            null,
+        })
+        .eq('id', book.id)
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setCustomCover('')
+      setCoverUrlInput('')
+
+      setBook({
+        ...book,
+        custom_cover_url:
+          null,
+      })
+    }
+
+    setUploadingCover(false)
+  }
+
   async function saveChanges() {
     if (!book) return
 
     setSaving(true)
     setError('')
+
+    const peopleArray = (
+      value: string
+    ) =>
+      value
+        .split(',')
+        .map(
+          item =>
+            item.trim()
+        )
+        .filter(Boolean)
 
     const authorsArray =
       authors
@@ -291,6 +544,46 @@ export default function BookPage() {
 
           publisher:
             publisher.trim() ||
+            null,
+
+          language:
+            language.trim() ||
+            null,
+
+          series:
+            series.trim() ||
+            null,
+
+          format:
+            format.trim() ||
+            null,
+
+          description:
+            description.trim() ||
+            null,
+
+          translators:
+            peopleArray(
+              translators
+            ),
+
+          editors:
+            peopleArray(
+              editors
+            ),
+
+          illustrators:
+            peopleArray(
+              illustrators
+            ),
+
+          introductions:
+            peopleArray(
+              introductions
+            ),
+
+          bibliographic_notes:
+            bibliographicNotes.trim() ||
             null,
 
           publication_year:
@@ -450,10 +743,30 @@ export default function BookPage() {
               }
             />
 
-            {book.description && (
+            {book.description ? (
               <BookSynopsis
                 text={book.description}
               />
+            ) : (
+              <section className="mt-5 px-1">
+
+                <p className="text-[#8e8e93] text-xs">
+                  Il libro
+                </p>
+
+                <div className="flex items-center justify-between gap-4 mt-1">
+
+                  <h2 className="font-bold text-[19px] tracking-[-0.02em]">
+                    Trama
+                  </h2>
+
+                  <span className="text-[#8e8e93] text-[13px]">
+                    Non disponibile
+                  </span>
+
+                </div>
+
+              </section>
             )}
 
             <ReadingStateCard
@@ -511,88 +824,294 @@ export default function BookPage() {
 
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-6">
 
-              <Field
-                label="Titolo"
-                value={title}
-                onChange={
-                  setTitle
-                }
-              />
+              <EditSection
+                eyebrow="Immagine"
+                title="Copertina"
+              >
 
-              <Field
-                label="Sottotitolo"
-                value={subtitle}
-                onChange={
-                  setSubtitle
-                }
-              />
+                <div className="flex items-start gap-4">
 
-              <Field
-                label="Autori"
-                value={authors}
-                onChange={
-                  setAuthors
-                }
-              />
+                  <div className="w-[92px] aspect-[2/3] rounded-[14px] overflow-hidden shadow-md shrink-0">
 
-              <Field
-                label="Editore"
-                value={publisher}
-                onChange={
-                  setPublisher
-                }
-              />
+                    <BookCover
+                      title={title || book.title}
+                      authors={
+                        authors
+                          ? authors
+                              .split(',')
+                              .map(
+                                item =>
+                                  item.trim()
+                              )
+                              .filter(Boolean)
+                          : book.authors
+                      }
+                      coverUrl={
+                        customCover ||
+                        book.cover_url
+                      }
+                    />
 
-              <div className="grid grid-cols-2 gap-3">
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+
+                    <p className="font-semibold text-[15px]">
+                      {uploadingCover
+                        ? 'Caricamento…'
+                        : customCover
+                          ? 'Copertina personalizzata'
+                          : book.cover_url
+                            ? 'Copertina originale'
+                            : 'Nessuna copertina'}
+                    </p>
+
+                    <p className="text-[#8e8e93] text-xs leading-relaxed mt-1">
+                      Puoi fotografare la tua copia o scegliere un'immagine dalla libreria.
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+
+                  <label className="bg-black text-white rounded-2xl py-3.5 font-semibold text-sm text-center cursor-pointer exl-press">
+
+                    Scatta foto
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={uploadBookCover}
+                      disabled={uploadingCover}
+                      className="hidden"
+                    />
+
+                  </label>
+
+                  <label className="bg-white/70 dark:bg-white/10 rounded-2xl py-3.5 font-semibold text-sm text-center cursor-pointer exl-press">
+
+                    Scegli foto
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={uploadBookCover}
+                      disabled={uploadingCover}
+                      className="hidden"
+                    />
+
+                  </label>
+
+                </div>
+
+                <div>
+
+                  <label className="text-xs text-[#8e8e93] ml-2">
+                    Oppure URL immagine
+                  </label>
+
+                  <div className="flex gap-2 mt-1">
+
+                    <input
+                      value={coverUrlInput}
+                      onChange={(e) =>
+                        setCoverUrlInput(
+                          e.target.value
+                        )
+                      }
+                      placeholder="https://..."
+                      className="min-w-0 flex-1 bg-white/70 dark:bg-white/[0.08] rounded-2xl px-4 py-3.5 outline-none"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={saveCoverUrl}
+                      disabled={
+                        uploadingCover ||
+                        !coverUrlInput.trim()
+                      }
+                      className="px-4 rounded-2xl bg-black/5 dark:bg-white/10 font-semibold text-sm disabled:opacity-40 exl-press"
+                    >
+                      Usa
+                    </button>
+
+                  </div>
+
+                </div>
+
+                {customCover && (
+                  <button
+                    type="button"
+                    onClick={restoreOriginalCover}
+                    disabled={uploadingCover}
+                    className="w-full py-2 text-[#5E7FA3] font-medium text-sm exl-press disabled:opacity-40"
+                  >
+                    Ripristina copertina originale
+                  </button>
+                )}
+
+              </EditSection>
+
+              <EditSection
+                eyebrow="Libro"
+                title="Essenziali"
+              >
 
                 <Field
-                  label="Anno"
-                  value={
-                    publicationYear
-                  }
-                  onChange={
-                    setPublicationYear
-                  }
-                  type="number"
+                  label="Titolo"
+                  value={title}
+                  onChange={setTitle}
                 />
 
                 <Field
-                  label="Pagine"
-                  value={pages}
-                  onChange={
-                    setPages
-                  }
-                  type="number"
+                  label="Sottotitolo"
+                  value={subtitle}
+                  onChange={setSubtitle}
                 />
 
-              </div>
+                <Field
+                  label="Autori"
+                  value={authors}
+                  onChange={setAuthors}
+                  hint="Separa più autori con una virgola"
+                />
 
-              <LocationPicker
-                locations={locations}
-                value={locationId}
-                onChange={setLocationId}
-              />
+              </EditSection>
 
-              <div>
+              <EditSection
+                eyebrow="Pubblicazione"
+                title="Edizione"
+              >
 
-                <label className="text-xs text-[#8e8e93] ml-2">
-                  Note
-                </label>
+                <Field
+                  label="Editore"
+                  value={publisher}
+                  onChange={setPublisher}
+                />
 
-                <textarea
+                <Field
+                  label="Collana"
+                  value={series}
+                  onChange={setSeries}
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+
+                  <Field
+                    label="Anno"
+                    value={publicationYear}
+                    onChange={setPublicationYear}
+                    type="number"
+                  />
+
+                  <Field
+                    label="Pagine"
+                    value={pages}
+                    onChange={setPages}
+                    type="number"
+                  />
+
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+
+                  <Field
+                    label="Lingua"
+                    value={language}
+                    onChange={setLanguage}
+                  />
+
+                  <Field
+                    label="Formato"
+                    value={format}
+                    onChange={setFormat}
+                  />
+
+                </div>
+
+              </EditSection>
+
+              <EditSection
+                eyebrow="Questa edizione"
+                title="Contributori"
+                optional
+              >
+
+                <Field
+                  label="Traduttori"
+                  value={translators}
+                  onChange={setTranslators}
+                  hint="Separa più persone con una virgola"
+                />
+
+                <Field
+                  label="Curatori"
+                  value={editors}
+                  onChange={setEditors}
+                />
+
+                <Field
+                  label="Illustratori"
+                  value={illustrators}
+                  onChange={setIllustrators}
+                />
+
+                <Field
+                  label="Introduzioni e prefazioni"
+                  value={introductions}
+                  onChange={setIntroductions}
+                />
+
+              </EditSection>
+
+              <EditSection
+                eyebrow="Contenuto"
+                title="Trama e note"
+              >
+
+                <TextAreaField
+                  label="Trama"
+                  value={description}
+                  onChange={setDescription}
+                  rows={7}
+                  placeholder="Trama del libro"
+                />
+
+                <TextAreaField
+                  label="Note personali"
                   value={notes}
-                  onChange={(e) =>
-                    setNotes(
-                      e.target.value
-                    )
-                  }
-                  rows={5}
-                  className="w-full bg-white/70 rounded-2xl px-4 py-4 mt-1 outline-none resize-none"
+                  onChange={setNotes}
+                  rows={4}
+                  placeholder="Le tue note su questa copia"
                 />
 
-              </div>
+                <TextAreaField
+                  label="Note sull'edizione"
+                  value={bibliographicNotes}
+                  onChange={setBibliographicNotes}
+                  rows={3}
+                  placeholder="Informazioni bibliografiche sull'edizione"
+                />
+
+              </EditSection>
+
+              <EditSection
+                eyebrow="Biblioteca"
+                title="Collocazione"
+              >
+
+                <LocationPicker
+                  locations={locations}
+                  value={locationId}
+                  onChange={setLocationId}
+                />
+
+              </EditSection>
 
             </div>
 
@@ -637,6 +1156,7 @@ function Field({
   value,
   onChange,
   type = 'text',
+  hint,
 }: {
   label: string
   value: string
@@ -644,6 +1164,7 @@ function Field({
     value: string
   ) => void
   type?: string
+  hint?: string
 }) {
   return (
     <div>
@@ -660,7 +1181,93 @@ function Field({
             e.target.value
           )
         }
-        className="w-full bg-white/70 rounded-2xl px-4 py-4 mt-1 outline-none"
+        className="w-full bg-white/70 dark:bg-white/[0.08] rounded-2xl px-4 py-3.5 mt-1 outline-none"
+      />
+
+      {hint && (
+        <p className="text-[#8e8e93] text-[11px] ml-2 mt-1">
+          {hint}
+        </p>
+      )}
+
+    </div>
+  )
+}
+
+function EditSection({
+  eyebrow,
+  title,
+  optional = false,
+  children,
+}: {
+  eyebrow: string
+  title: string
+  optional?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <section>
+
+      <div className="flex items-end justify-between gap-3 mb-3 px-1">
+
+        <div>
+          <p className="text-[#8e8e93] text-[11px] uppercase tracking-[0.08em]">
+            {eyebrow}
+          </p>
+
+          <h2 className="font-bold text-[19px] tracking-[-0.02em] mt-0.5">
+            {title}
+          </h2>
+        </div>
+
+        {optional && (
+          <span className="text-[#8e8e93] text-xs">
+            Facoltativo
+          </span>
+        )}
+
+      </div>
+
+      <div className="bg-white/45 dark:bg-white/[0.06] rounded-[22px] p-3 space-y-3 border border-white/40 dark:border-white/[0.06]">
+        {children}
+      </div>
+
+    </section>
+  )
+}
+
+function TextAreaField({
+  label,
+  value,
+  onChange,
+  rows = 4,
+  placeholder,
+}: {
+  label: string
+  value: string
+  onChange: (
+    value: string
+  ) => void
+  rows?: number
+  placeholder?: string
+}) {
+  return (
+    <div>
+
+      <label className="text-xs text-[#8e8e93] ml-2">
+        {label}
+      </label>
+
+      <textarea
+        value={value}
+        onChange={(e) =>
+          onChange(
+            e.target.value
+          )
+        }
+        rows={rows}
+        placeholder={placeholder}
+        className="w-full bg-white/70 dark:bg-white/[0.08] rounded-2xl px-4 py-3.5 mt-1 outline-none resize-none"
       />
 
     </div>

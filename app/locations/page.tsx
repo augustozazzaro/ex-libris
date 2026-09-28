@@ -19,6 +19,7 @@ import {
   Plus,
   SquareStack,
   Trash2,
+  X,
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
@@ -607,8 +608,12 @@ export default function LocationsPage() {
                   booksInside={
                     booksInside
                   }
-                  onSelect={
-                    setSelected
+                  onSelect={(location) =>
+                    setSelected(
+                      selected?.id === location.id
+                        ? null
+                        : location
+                    )
                   }
                   selectedId={
                     selected?.id ??
@@ -620,10 +625,27 @@ export default function LocationsPage() {
 
           </section>
 
-          <aside className="fixed left-3 right-3 bottom-[calc(88px+env(safe-area-inset-bottom))] z-40 lg:static">
+          <aside className="fixed left-4 right-4 bottom-[calc(86px+env(safe-area-inset-bottom))] z-40 lg:static">
 
             {selected && (
-              <div className="exl-glass exl-card p-5 max-h-[58dvh] overflow-y-auto shadow-[0_18px_60px_rgba(0,0,0,0.18)] lg:max-h-none lg:overflow-visible lg:shadow-none lg:sticky lg:top-6">
+              <div className="exl-glass rounded-[28px] p-5 max-h-[46dvh] overflow-y-auto border border-white/60 dark:border-white/10 shadow-[0_18px_55px_rgba(0,0,0,0.20)] lg:rounded-[24px] lg:max-h-none lg:overflow-visible lg:shadow-none lg:sticky lg:top-6">
+
+                <div className="lg:hidden relative -mt-1 mb-4">
+
+                  <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto" />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelected(null)
+                    }
+                    className="absolute right-0 -top-2 w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center exl-press"
+                    aria-label="Chiudi"
+                  >
+                    <X size={17} />
+                  </button>
+
+                </div>
 
                 <div className="flex items-center gap-3">
 

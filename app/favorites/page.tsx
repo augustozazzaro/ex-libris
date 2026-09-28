@@ -56,7 +56,11 @@ export default function FavoritesPage() {
       const ids =
         (states ?? [])
           .map(
-            (item) =>
+            (
+              item: {
+                book_id: string
+              }
+            ) =>
               item.book_id
           )
 

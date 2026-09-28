@@ -16,6 +16,9 @@ import { createClient } from '@/utils/supabase/client'
 import {
   haptic,
 } from '@/utils/haptics'
+import {
+  removeCaches,
+} from '@/utils/exlibris-cache'
 
 type ReadingStatus =
   | 'none'
@@ -137,6 +140,11 @@ export default function ReadingStateCard({
       } else {
         haptic('medium')
       }
+
+      removeCaches([
+        `home:${user.id}`,
+        `profile:${user.id}`,
+      ])
     } else {
       haptic('error')
     }

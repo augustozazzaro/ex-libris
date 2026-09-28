@@ -24,6 +24,9 @@ import { createClient } from '@/utils/supabase/client'
 import {
   haptic,
 } from '@/utils/haptics'
+import {
+  removeCaches,
+} from '@/utils/exlibris-cache'
 import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
 import IsbnScanner from '@/components/IsbnScanner'
@@ -697,6 +700,12 @@ export default function AddBookPage() {
     }
 
     haptic('success')
+
+    removeCaches([
+      `home:${user.id}`,
+      `catalog:${user.id}`,
+      `profile:${user.id}`,
+    ])
 
     setSaving(false)
 

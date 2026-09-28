@@ -24,6 +24,10 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  readCache,
+  writeCache,
+} from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 import ProfileButton from '@/components/ProfileButton'
 
@@ -34,6 +38,11 @@ type Book = {
   cover_url: string | null
   custom_cover_url: string | null
   status: string
+}
+
+type HomeSnapshot = {
+  books: Book[]
+  favoriteCount: number
 }
 
 export default function Home() {
@@ -53,12 +62,15 @@ export default function Home() {
   const [error, setError] = useState('')
 
   async function loadLibrary() {
-    setLoading(true)
     setError('')
 
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session },
+    } =
+      await supabase.auth.getSession()
+
+    const user =
+      session?.user
 
     if (!user) {
       setAuthenticated(false)
@@ -70,17 +82,51 @@ export default function Home() {
 
     setAuthenticated(true)
 
-    const { data: membership } =
+    const cacheKey =
+      `home:${user.id}`
+
+    const cached =
+      readCache<HomeSnapshot>(
+        cacheKey
+      )
+
+    if (cached) {
+      setBooks(
+        cached.books
+      )
+
+      setFavoriteCount(
+        cached.favoriteCount
+      )
+
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
+    const {
+      data: membership,
+      error: membershipError,
+    } =
       await supabase
         .from('family_members')
         .select('family_id')
-        .eq('user_id', user.id)
+        .eq(
+          'user_id',
+          user.id
+        )
         .single()
 
-    if (!membership) {
-      setError(
-        'Non riesco a trovare la biblioteca associata al tuo account.'
-      )
+    if (
+      membershipError ||
+      !membership
+    ) {
+      if (!cached) {
+        setError(
+          'Non riesco a trovare la biblioteca associata al tuo account.'
+        )
+      }
+
       setLoading(false)
       return
     }
@@ -99,32 +145,74 @@ export default function Home() {
           custom_cover_url,
           status
         `)
-        .eq('family_id', membership.family_id)
-        .order('created_at', {
-          ascending: false,
-        }),
+        .eq(
+          'family_id',
+          membership.family_id
+        )
+        .order(
+          'created_at',
+          {
+            ascending: false,
+          }
+        ),
 
       supabase
-        .from('user_book_state')
-        .select('book_id', {
-          count: 'exact',
-          head: true,
-        })
-        .eq('user_id', user.id)
-        .eq('favorite', true),
+        .from(
+          'user_book_state'
+        )
+        .select(
+          'book_id',
+          {
+            count: 'exact',
+            head: true,
+          }
+        )
+        .eq(
+          'user_id',
+          user.id
+        )
+        .eq(
+          'favorite',
+          true
+        ),
     ])
 
-    if (booksResult.error) {
-      setError(
-        'Errore durante il caricamento della biblioteca.'
-      )
+    if (
+      booksResult.error
+    ) {
+      if (!cached) {
+        setError(
+          'Errore durante il caricamento della biblioteca.'
+        )
+      }
+
       setLoading(false)
       return
     }
 
-    setBooks(booksResult.data ?? [])
+    const snapshot:
+      HomeSnapshot = {
+        books:
+          booksResult.data ??
+          [],
+
+        favoriteCount:
+          favoriteResult.count ??
+          cached?.favoriteCount ??
+          0,
+      }
+
+    setBooks(
+      snapshot.books
+    )
+
     setFavoriteCount(
-      favoriteResult.count ?? 0
+      snapshot.favoriteCount
+    )
+
+    writeCache(
+      cacheKey,
+      snapshot
     )
 
     setLoading(false)

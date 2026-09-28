@@ -31,6 +31,11 @@ type LucideIcon
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  readCache,
+  writeCache,
+  removeCaches,
+} from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
 type StateRow = {
@@ -47,6 +52,17 @@ type Book = {
   pages: number | null
   cover_url: string | null
   custom_cover_url: string | null
+}
+
+type ProfileSnapshot = {
+  email: string
+  fullName: string
+  nickname: string
+  bio: string
+  avatarUrl: string
+  readingGoal: number
+  states: StateRow[]
+  books: Book[]
 }
 
 export default function ProfilePage() {
@@ -81,73 +97,172 @@ export default function ProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false)
 
   async function loadProfile() {
-    setLoading(true)
     setError('')
 
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+      data: { session },
+    } =
+      await supabase.auth.getSession()
 
-    if (userError || !user) {
-      setError('Sessione non disponibile.')
+    const user =
+      session?.user
+
+    if (!user) {
+      setError(
+        'Sessione non disponibile.'
+      )
       setLoading(false)
       return
     }
 
     setUserId(user.id)
-    setEmail(user.email ?? '')
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select(`
-        full_name,
-        nickname,
-        bio,
-        avatar_url,
-        reading_goal
-      `)
-      .eq('id', user.id)
-      .maybeSingle()
+    const cacheKey =
+      `profile:${user.id}`
 
-    if (profile) {
-      setFullName(profile.full_name ?? '')
-      setNickname(profile.nickname ?? '')
-      setBio(profile.bio ?? '')
-      setAvatarUrl(profile.avatar_url ?? '')
-      setReadingGoal(profile.reading_goal ?? 12)
+    const cached =
+      readCache<ProfileSnapshot>(
+        cacheKey
+      )
+
+    if (cached) {
+      setEmail(cached.email)
+      setFullName(cached.fullName)
+      setNickname(cached.nickname)
+      setBio(cached.bio)
+      setAvatarUrl(cached.avatarUrl)
+      setReadingGoal(cached.readingGoal)
+      setStates(cached.states)
+      setBooks(cached.books)
+      setLoading(false)
+    } else {
+      setEmail(
+        user.email ?? ''
+      )
+      setLoading(true)
     }
 
-    const { data: stateData } = await supabase
-      .from('user_book_state')
-      .select(`
-        book_id,
-        favorite,
-        reading_status,
-        read_at
-      `)
-      .eq('user_id', user.id)
+    const [
+      profileResult,
+      statesResult,
+    ] =
+      await Promise.all([
+        supabase
+          .from('profiles')
+          .select(`
+            full_name,
+            nickname,
+            bio,
+            avatar_url,
+            reading_goal
+          `)
+          .eq(
+            'id',
+            user.id
+          )
+          .maybeSingle(),
 
-    const rows = (stateData ?? []) as StateRow[]
-    setStates(rows)
+        supabase
+          .from('user_book_state')
+          .select(`
+            book_id,
+            favorite,
+            reading_status,
+            read_at
+          `)
+          .eq(
+            'user_id',
+            user.id
+          ),
+      ])
 
-    const ids = rows.map((row) => row.book_id).filter(Boolean)
+    const profile =
+      profileResult.data
+
+    const rows =
+      (statesResult.data ??
+        []) as StateRow[]
+
+    const ids =
+      rows
+        .map(
+          row =>
+            row.book_id
+        )
+        .filter(Boolean)
+
+    let freshBooks:
+      Book[] = []
 
     if (ids.length > 0) {
-      const { data: bookData } = await supabase
-        .from('books')
-        .select(`
-          id,
-          title,
-          authors,
-          pages,
-          cover_url,
-          custom_cover_url
-        `)
-        .in('id', ids)
+      const {
+        data: bookData,
+      } =
+        await supabase
+          .from('books')
+          .select(`
+            id,
+            title,
+            authors,
+            pages,
+            cover_url,
+            custom_cover_url
+          `)
+          .in(
+            'id',
+            ids
+          )
 
-      setBooks((bookData ?? []) as Book[])
+      freshBooks =
+        (bookData ??
+          []) as Book[]
     }
+
+    const snapshot:
+      ProfileSnapshot = {
+        email:
+          user.email ?? '',
+
+        fullName:
+          profile?.full_name ??
+          '',
+
+        nickname:
+          profile?.nickname ??
+          '',
+
+        bio:
+          profile?.bio ??
+          '',
+
+        avatarUrl:
+          profile?.avatar_url ??
+          '',
+
+        readingGoal:
+          profile?.reading_goal ??
+          12,
+
+        states:
+          rows,
+
+        books:
+          freshBooks,
+      }
+
+    setEmail(snapshot.email)
+    setFullName(snapshot.fullName)
+    setNickname(snapshot.nickname)
+    setBio(snapshot.bio)
+    setAvatarUrl(snapshot.avatarUrl)
+    setReadingGoal(snapshot.readingGoal)
+    setStates(snapshot.states)
+    setBooks(snapshot.books)
+
+    writeCache(
+      cacheKey,
+      snapshot
+    )
 
     setLoading(false)
   }
@@ -262,6 +377,11 @@ export default function ProfilePage() {
       setError(error.message)
     } else {
       setSaved(true)
+
+      removeCaches([
+        `profile:${userId}`,
+      ])
+
       setEditing(false)
 
       setTimeout(() => {

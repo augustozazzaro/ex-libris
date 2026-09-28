@@ -29,6 +29,9 @@ import { createClient } from '@/utils/supabase/client'
 import {
   haptic,
 } from '@/utils/haptics'
+import {
+  removeCaches,
+} from '@/utils/exlibris-cache'
 import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
 import BookDetailHero from '@/components/BookDetailHero'
@@ -356,6 +359,11 @@ export default function BookPage() {
           ? 'success'
           : 'light'
       )
+
+      removeCaches([
+        `home:${user.id}`,
+        `profile:${user.id}`,
+      ])
     } else {
       haptic('error')
     }
@@ -720,6 +728,18 @@ export default function BookPage() {
     }
 
     haptic('success')
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user) {
+      removeCaches([
+        `home:${user.id}`,
+        `catalog:${user.id}`,
+        `profile:${user.id}`,
+      ])
+    }
 
     setEditing(false)
     setSaving(false)

@@ -21,6 +21,10 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  readCache,
+  writeCache,
+} from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
 import {
@@ -41,6 +45,11 @@ type Book = {
   location_id: string | null
   status: string
   created_at: string
+}
+
+type CatalogSnapshot = {
+  books: Book[]
+  locations: LocationItem[]
 }
 
 type SortMode =
@@ -85,30 +94,77 @@ export default function CatalogPage() {
 
   useEffect(() => {
     async function loadCatalog() {
+      setError('')
+
       const {
-        data: { user },
-      } = await supabase.auth.getUser()
+        data: { session },
+      } =
+        await supabase.auth.getSession()
+
+      const user =
+        session?.user
 
       if (!user) {
-        setError('Utente non autenticato.')
+        setError(
+          'Utente non autenticato.'
+        )
         setLoading(false)
         return
       }
 
-      const { data: membership } =
+      const cacheKey =
+        `catalog:${user.id}`
+
+      const cached =
+        readCache<CatalogSnapshot>(
+          cacheKey
+        )
+
+      if (cached) {
+        setBooks(
+          cached.books
+        )
+
+        setLocations(
+          cached.locations
+        )
+
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
+
+      const {
+        data: membership,
+        error: membershipError,
+      } =
         await supabase
           .from('family_members')
           .select('family_id')
-          .eq('user_id', user.id)
+          .eq(
+            'user_id',
+            user.id
+          )
           .single()
 
-      if (!membership) {
-        setError('Biblioteca non trovata.')
+      if (
+        membershipError ||
+        !membership
+      ) {
+        if (!cached) {
+          setError(
+            'Biblioteca non trovata.'
+          )
+        }
+
         setLoading(false)
         return
       }
 
-      const [booksResult, locationsResult] =
+      const [
+        booksResult,
+        locationsResult,
+      ] =
         await Promise.all([
           supabase
             .from('books')
@@ -145,21 +201,41 @@ export default function CatalogPage() {
             ),
         ])
 
-      if (booksResult.error) {
-        setError(
-          'Errore nel caricamento del catalogo.'
-        )
+      if (
+        booksResult.error
+      ) {
+        if (!cached) {
+          setError(
+            'Errore nel caricamento del catalogo.'
+          )
+        }
 
         setLoading(false)
         return
       }
 
+      const snapshot:
+        CatalogSnapshot = {
+          books:
+            (booksResult.data ??
+              []) as Book[],
+
+          locations:
+            (locationsResult.data ??
+              []) as LocationItem[],
+        }
+
       setBooks(
-        booksResult.data ?? []
+        snapshot.books
       )
 
       setLocations(
-        locationsResult.data ?? []
+        snapshot.locations
+      )
+
+      writeCache(
+        cacheKey,
+        snapshot
       )
 
       setLoading(false)

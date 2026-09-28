@@ -157,11 +157,21 @@ export default function ShufflePage() {
     const readIds = new Set(
       (statesResult.data ?? [])
         .filter(
-          (row) =>
+          (
+            row: {
+              book_id: string
+              reading_status: string | null
+            }
+          ) =>
             row.reading_status === 'read'
         )
         .map(
-          (row) =>
+          (
+            row: {
+              book_id: string
+              reading_status: string | null
+            }
+          ) =>
             row.book_id
         )
     )
@@ -169,7 +179,9 @@ export default function ShufflePage() {
     const available =
       (booksResult.data ?? [])
         .filter(
-          (book) =>
+          (
+            book: Book
+          ) =>
             !readIds.has(book.id)
         ) as Book[]
 

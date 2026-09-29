@@ -13,6 +13,10 @@ import {
 import Link from 'next/link'
 
 import {
+  motion,
+} from 'framer-motion'
+
+import {
   ArrowLeft,
   BookCheck,
   BookOpen,
@@ -27,6 +31,8 @@ import {
   Mail,
   Pencil,
   Target,
+  Trash2,
+  X,
   Quote,
   type LucideIcon,
 } from 'lucide-react'
@@ -38,6 +44,7 @@ import {
   removeCaches,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
+import ExLibrisConfirmDialog from '@/components/ExLibrisConfirmDialog'
 
 import {
   compressAvatar,
@@ -110,9 +117,26 @@ export default function ProfilePage() {
     useState<CitationPreview | null>(null)
 
   const [editing, setEditing] = useState(false)
+
+  const [
+    editSnapshot,
+    setEditSnapshot,
+  ] =
+    useState<{
+      fullName: string
+      nickname: string
+      bio: string
+      readingGoal: number
+    } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+
+  const [
+    removeAvatarOpen,
+    setRemoveAvatarOpen,
+  ] =
+    useState(false)
 
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -452,6 +476,46 @@ export default function ProfilePage() {
       .map((part) => part[0]?.toUpperCase())
       .join('') || 'EL'
 
+  function openProfileEditor() {
+    setEditSnapshot({
+      fullName,
+      nickname,
+      bio,
+      readingGoal,
+    })
+
+    setError('')
+    setEditing(true)
+
+    haptic('light')
+  }
+
+  function cancelProfileEditor() {
+    if (editSnapshot) {
+      setFullName(
+        editSnapshot.fullName
+      )
+
+      setNickname(
+        editSnapshot.nickname
+      )
+
+      setBio(
+        editSnapshot.bio
+      )
+
+      setReadingGoal(
+        editSnapshot.readingGoal
+      )
+    }
+
+    setEditSnapshot(null)
+    setError('')
+    setEditing(false)
+
+    haptic('light')
+  }
+
   async function saveProfile() {
     if (!userId) return
 
@@ -479,6 +543,7 @@ export default function ProfilePage() {
       })
 
       setSaved(true)
+      setEditSnapshot(null)
 
       removeCaches([
         `profile:${userId}`,
@@ -839,11 +904,24 @@ export default function ProfilePage() {
           </Link>
 
           <button
-            onClick={() => setEditing(!editing)}
+            type="button"
+            onClick={
+              editing
+                ? cancelProfileEditor
+                : openProfileEditor
+            }
             className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
-            aria-label="Modifica profilo"
+            aria-label={
+              editing
+                ? 'Chiudi modifica profilo'
+                : 'Modifica profilo'
+            }
           >
-            {editing ? <Check size={20} /> : <Pencil size={18} />}
+            {editing ? (
+              <X size={19} />
+            ) : (
+              <Pencil size={18} />
+            )}
           </button>
         </div>
 
@@ -862,31 +940,58 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <label className="absolute right-0 bottom-0 w-10 h-10 bg-black text-white rounded-full flex items-center justify-center shadow-lg cursor-pointer exl-press">
-              <Camera size={18} />
+            {editing && (
+              <label className="absolute right-0 bottom-0 w-10 h-10 bg-black text-white dark:bg-white dark:text-black rounded-full flex items-center justify-center shadow-lg cursor-pointer exl-press">
+                <Camera size={18} />
 
-              <input
-                type="file"
-                accept="image/*"
-                onChange={uploadAvatar}
-                className="hidden"
-              />
-            </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={uploadAvatar}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+            )}
           </div>
 
-          {uploading ? (
+          {uploading && (
             <p className="text-[#8e8e93] text-xs mt-3">
               Ottimizzazione foto…
             </p>
-          ) : avatarUrl ? (
-            <button
-              type="button"
-              onClick={removeAvatar}
-              className="text-[#ff3b30] text-xs font-semibold mt-3 exl-press"
-            >
-              Rimuovi foto
-            </button>
-          ) : null}
+          )}
+
+          {editing && !uploading && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+
+              <label className="px-3.5 py-2 rounded-full bg-black/[0.05] dark:bg-white/[0.09] text-[12px] font-semibold cursor-pointer exl-press">
+                {avatarUrl
+                  ? 'Cambia foto'
+                  : 'Aggiungi foto'}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={uploadAvatar}
+                  className="hidden"
+                />
+              </label>
+
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic('light')
+                    setRemoveAvatarOpen(true)
+                  }}
+                  className="px-3.5 py-2 rounded-full bg-[#ff3b30]/10 text-[#ff3b30] text-[12px] font-semibold exl-press"
+                >
+                  Rimuovi
+                </button>
+              )}
+
+            </div>
+          )}
 
           <h1 className="text-[34px] font-bold tracking-[-0.045em] mt-5">
             {fullName || 'Il tuo profilo'}
@@ -1126,13 +1231,51 @@ export default function ProfilePage() {
         </Link>
 
         {editing && (
-          <section className="exl-glass exl-card p-5 mt-6">
+          <motion.section
+            initial={{
+              opacity: 0,
+              y: 10,
+              scale: 0.99,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 330,
+              damping: 30,
+            }}
+            className="exl-glass exl-card p-5 md:p-6 mt-6"
+          >
 
-            <h2 className="font-bold text-lg">
-              Modifica profilo
-            </h2>
+            <div className="flex items-start justify-between gap-4">
 
-            <div className="space-y-3 mt-5">
+              <div>
+                <p className="text-[#8e8e93] text-[11px] uppercase tracking-[0.08em]">
+                  Il tuo spazio
+                </p>
+
+                <h2 className="font-bold text-[22px] tracking-[-0.03em] mt-1">
+                  Modifica profilo
+                </h2>
+
+                <p className="text-[#8e8e93] text-sm mt-1">
+                  Personalizza come appari nella biblioteca.
+                </p>
+              </div>
+
+              <div className="w-11 h-11 rounded-[15px] bg-[#5E7FA3]/12 text-[#5E7FA3] flex items-center justify-center shrink-0">
+                <Pencil size={19} />
+              </div>
+
+            </div>
+
+            <div className="h-px bg-black/5 dark:bg-white/10 my-5" />
+
+            <div className="space-y-4">
+
               <ProfileField
                 label="Nome"
                 value={fullName}
@@ -1154,11 +1297,22 @@ export default function ProfilePage() {
 
                 <textarea
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
+                  onChange={(e) =>
+                    setBio(
+                      e.target.value
+                    )
+                  }
                   rows={3}
+                  maxLength={280}
                   placeholder="Qualcosa sui tuoi gusti di lettura…"
-                  className="w-full bg-white/70 rounded-2xl px-4 py-4 mt-1 outline-none resize-none"
+                  className="w-full bg-white/70 dark:bg-white/[0.08] rounded-[18px] px-4 py-4 mt-1 outline-none resize-none"
                 />
+
+                <div className="flex justify-end mt-1 px-2">
+                  <span className="text-[#8e8e93] text-[10px]">
+                    {bio.length}/280
+                  </span>
+                </div>
               </div>
 
               <div>
@@ -1166,37 +1320,94 @@ export default function ProfilePage() {
                   Obiettivo annuale
                 </label>
 
-                <input
-                  type="number"
-                  min="0"
-                  max="999"
-                  value={readingGoal}
-                  onChange={(e) =>
-                    setReadingGoal(Number(e.target.value))
-                  }
-                  className="w-full bg-white/70 rounded-2xl px-4 py-4 mt-1 outline-none"
-                />
+                <div className="relative mt-1">
+                  <Target
+                    size={18}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#DDB342]"
+                  />
+
+                  <input
+                    type="number"
+                    min="0"
+                    max="999"
+                    value={readingGoal}
+                    onChange={(e) =>
+                      setReadingGoal(
+                        Number(
+                          e.target.value
+                        )
+                      )
+                    }
+                    className="w-full bg-white/70 dark:bg-white/[0.08] rounded-[18px] pl-12 pr-4 py-4 outline-none"
+                  />
+                </div>
+
+                <p className="text-[#8e8e93] text-[11px] mt-1.5 ml-2">
+                  Quanti libri vuoi leggere quest’anno?
+                </p>
               </div>
+
+              <div className="rounded-[20px] bg-black/[0.025] dark:bg-white/[0.05] px-4 py-3.5 flex items-center gap-3">
+
+                <div className="w-9 h-9 rounded-[12px] bg-[#5E7FA3]/12 text-[#5E7FA3] flex items-center justify-center shrink-0">
+                  <Mail size={17} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] text-[#8e8e93]">
+                    Email account
+                  </p>
+
+                  <p className="font-medium text-sm truncate mt-0.5">
+                    {email}
+                  </p>
+                </div>
+
+              </div>
+
             </div>
 
             {error && (
-              <p className="text-red-500 text-sm mt-4">
+              <motion.p
+                initial={{
+                  opacity: 0,
+                  y: -3,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                className="text-[#ff3b30] text-sm mt-4 px-1"
+              >
                 {error}
-              </p>
+              </motion.p>
             )}
 
-            <button
+            <motion.button
+              whileTap={{
+                scale: 0.985,
+              }}
               onClick={saveProfile}
               disabled={saving}
-              className="w-full bg-black text-white rounded-2xl py-4 font-semibold mt-5 exl-press"
+              className={`w-full rounded-[19px] py-4 font-semibold mt-5 flex items-center justify-center gap-2 transition-colors exl-press disabled:opacity-50 ${
+                saved
+                  ? 'bg-[#34c759] text-white'
+                  : 'bg-black text-white dark:bg-white dark:text-black'
+              }`}
             >
-              {saved
-                ? 'Salvato ✓'
-                : saving
-                  ? 'Salvataggio…'
-                  : 'Salva modifiche'}
-            </button>
-          </section>
+              {saved ? (
+                <>
+                  <Check size={18} />
+                  Salvato
+                </>
+              ) : saving ? (
+                'Salvataggio…'
+              ) : (
+                'Salva modifiche'
+              )}
+            </motion.button>
+
+          </motion.section>
         )}
 
         <section className="mt-8">
@@ -1326,6 +1537,27 @@ export default function ProfilePage() {
         </button>
 
       </div>
+
+      <ExLibrisConfirmDialog
+        open={removeAvatarOpen}
+        title="Rimuovere la foto?"
+        message="La foto del profilo verrà eliminata e al suo posto verranno mostrate le tue iniziali."
+        confirmLabel="Rimuovi foto"
+        destructive
+        onCancel={() =>
+          setRemoveAvatarOpen(
+            false
+          )
+        }
+        onConfirm={async () => {
+          setRemoveAvatarOpen(
+            false
+          )
+
+          await removeAvatar()
+        }}
+      />
+
     </main>
   )
 }

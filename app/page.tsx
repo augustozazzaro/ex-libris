@@ -1324,7 +1324,12 @@ export default function Home() {
           )}
 
 
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory exl-scrollbar-none -mx-5 px-5 mt-3 pb-1">
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory exl-scrollbar-none -mx-5 mt-3">
+
+            <div
+              aria-hidden
+              className="w-2 shrink-0"
+            />
 
             <ReadingHomeTile
               href="/my-books?filter=reading"
@@ -1360,6 +1365,11 @@ export default function Home() {
               value={`${readThisYear.length}/${readingGoal}`}
               icon={Target}
               subtitle={`${readingGoalProgress}% completato`}
+            />
+
+            <div
+              aria-hidden
+              className="w-2 shrink-0"
             />
 
           </div>
@@ -1574,7 +1584,7 @@ function ReadingHomeTile({
     >
       <Link
         href={href}
-        className="exl-glass block rounded-[23px] p-4 min-h-[126px] exl-press"
+        className="exl-glass block rounded-[23px] p-4 min-h-[126px] exl-press shadow-none"
       >
 
         <div className="flex items-start justify-between gap-3">

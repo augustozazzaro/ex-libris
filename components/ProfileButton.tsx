@@ -7,24 +7,103 @@ import {
 
 import Link from 'next/link'
 
-import { createClient } from '@/utils/supabase/client'
+import {
+  createClient,
+} from '@/utils/supabase/client'
+
+import {
+  initialsFor,
+  ProfileIdentity,
+  readProfileIdentity,
+  writeProfileIdentity,
+} from '@/utils/profile-identity'
 
 export default function ProfileButton() {
-  const supabase = createClient()
+  const supabase =
+    createClient()
+
+  const cached =
+    readProfileIdentity()
 
   const [avatar, setAvatar] =
-    useState('')
+    useState(
+      cached?.avatarUrl ??
+        ''
+    )
 
-  const [initials, setInitials] =
-    useState('EL')
+  const [fullName, setFullName] =
+    useState(
+      cached?.fullName ??
+        ''
+    )
 
   useEffect(() => {
-    async function load() {
+    function applyIdentity(
+      event: Event
+    ) {
+      const custom =
+        event as CustomEvent<
+          ProfileIdentity
+        >
+
+      const value =
+        custom.detail ??
+        readProfileIdentity()
+
+      if (!value) return
+
+      setAvatar(
+        value.avatarUrl
+      )
+
+      setFullName(
+        value.fullName
+      )
+    }
+
+    window.addEventListener(
+      'exlibris-profile-change',
+      applyIdentity
+    )
+
+    async function refresh() {
       const {
-        data: { user },
-      } = await supabase.auth.getUser()
+        data: { session },
+      } =
+        await supabase.auth
+          .getSession()
+
+      const user =
+        session?.user
 
       if (!user) return
+
+      const existing =
+        readProfileIdentity()
+
+      /*
+       * Se abbiamo già l'identità
+       * di questo utente, la UI è
+       * immediatamente pronta.
+       * Facciamo comunque refresh
+       * silenzioso dal DB.
+       */
+      if (
+        existing &&
+        existing.userId ===
+          user.id
+      ) {
+        const cachedIdentity =
+          existing
+
+        setAvatar(
+          cachedIdentity.avatarUrl
+        )
+
+        setFullName(
+          cachedIdentity.fullName
+        )
+      }
 
       const { data } =
         await supabase
@@ -33,37 +112,53 @@ export default function ProfileButton() {
             full_name,
             avatar_url
           `)
-          .eq('id', user.id)
-          .single()
+          .eq(
+            'id',
+            user.id
+          )
+          .maybeSingle()
 
       if (!data) return
 
-      setAvatar(
-        data.avatar_url ?? ''
+      const identity = {
+        userId:
+          user.id,
+
+        fullName:
+          data.full_name ??
+          '',
+
+        avatarUrl:
+          data.avatar_url ??
+          '',
+      }
+
+      writeProfileIdentity(
+        identity
       )
 
-      const value =
-        data.full_name
-          ?.split(' ')
-          .filter(Boolean)
-          .slice(0, 2)
-          .map(
-            (part: string) =>
-              part[0]?.toUpperCase()
-          )
-          .join('')
+      setAvatar(
+        identity.avatarUrl
+      )
 
-      if (value) {
-        setInitials(value)
-      }
+      setFullName(
+        identity.fullName
+      )
     }
 
-    load()
+    refresh()
+
+    return () =>
+      window.removeEventListener(
+        'exlibris-profile-change',
+        applyIdentity
+      )
   }, [])
 
   return (
     <Link
       href="/profile"
+      prefetch
       aria-label="Profilo"
       className="w-11 h-11 rounded-full overflow-hidden bg-[#5E7FA3] text-white flex items-center justify-center font-bold shadow-sm exl-press border-2 border-white/70"
     >
@@ -72,11 +167,14 @@ export default function ProfileButton() {
         <img
           src={avatar}
           alt=""
+          decoding="async"
           className="w-full h-full object-cover"
         />
       ) : (
         <span className="text-sm">
-          {initials}
+          {initialsFor(
+            fullName
+          )}
         </span>
       )}
 

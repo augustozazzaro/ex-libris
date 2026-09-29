@@ -39,6 +39,18 @@ import {
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
+import {
+  compressAvatar,
+} from '@/utils/image-compression'
+
+import {
+  writeProfileIdentity,
+} from '@/utils/profile-identity'
+
+import {
+  haptic,
+} from '@/utils/haptics'
+
 type StateRow = {
   book_id: string
   favorite: boolean
@@ -334,6 +346,14 @@ export default function ProfilePage() {
       snapshot.latestCitation
     )
 
+    writeProfileIdentity({
+      userId: user.id,
+      fullName:
+        snapshot.fullName,
+      avatarUrl:
+        snapshot.avatarUrl,
+    })
+
     writeCache(
       cacheKey,
       snapshot
@@ -451,6 +471,13 @@ export default function ProfilePage() {
     if (error) {
       setError(error.message)
     } else {
+      writeProfileIdentity({
+        userId,
+        fullName:
+          fullName.trim(),
+        avatarUrl,
+      })
+
       setSaved(true)
 
       removeCaches([
@@ -470,51 +497,263 @@ export default function ProfilePage() {
   async function uploadAvatar(
     event: ChangeEvent<HTMLInputElement>
   ) {
-    const file = event.target.files?.[0]
+    const file =
+      event.target.files?.[0]
 
-    if (!file || !userId) return
+    if (
+      !file ||
+      !userId
+    ) {
+      return
+    }
+
+    if (
+      !file.type.startsWith(
+        'image/'
+      )
+    ) {
+      setError(
+        'Seleziona un’immagine valida.'
+      )
+
+      return
+    }
 
     setUploading(true)
     setError('')
 
-    const extension =
-      file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    /*
+     * Preview immediata.
+     * L'utente vede subito la
+     * nuova foto mentre il file
+     * viene compresso/uploadato.
+     */
+    const previewUrl =
+      URL.createObjectURL(
+        file
+      )
 
-    const path = `${userId}/avatar.${extension}`
+    const previousAvatar =
+      avatarUrl
 
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(path, file, {
-        upsert: true,
-        cacheControl: '3600',
+    setAvatarUrl(
+      previewUrl
+    )
+
+    try {
+      const compressed =
+        await compressAvatar(
+          file
+        )
+
+      const path =
+        `${userId}/avatar.webp`
+
+      const {
+        error:
+          uploadError,
+      } =
+        await supabase.storage
+          .from('avatars')
+          .upload(
+            path,
+            compressed,
+            {
+              upsert: true,
+              cacheControl:
+                '31536000',
+              contentType:
+                'image/webp',
+            }
+          )
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      const { data } =
+        supabase.storage
+          .from('avatars')
+          .getPublicUrl(
+            path
+          )
+
+      const url =
+        `${data.publicUrl}?v=${Date.now()}`
+
+      const {
+        error:
+          updateError,
+      } =
+        await supabase
+          .from('profiles')
+          .update({
+            avatar_url:
+              url,
+          })
+          .eq(
+            'id',
+            userId
+          )
+
+      if (updateError) {
+        throw updateError
+      }
+
+      setAvatarUrl(
+        url
+      )
+
+      writeProfileIdentity({
+        userId,
+        fullName,
+        avatarUrl:
+          url,
       })
 
-    if (uploadError) {
-      setError(uploadError.message)
+      removeCaches([
+        `profile:${userId}`,
+      ])
+
+      haptic('success')
+    } catch (
+      uploadError
+    ) {
+      setAvatarUrl(
+        previousAvatar
+      )
+
+      setError(
+        uploadError
+          instanceof Error
+          ? uploadError.message
+          : 'Non è stato possibile caricare la foto.'
+      )
+
+      haptic('error')
+    } finally {
+      URL.revokeObjectURL(
+        previewUrl
+      )
+
+      event.target.value =
+        ''
+
       setUploading(false)
-      return
     }
+  }
 
-    const { data } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(path)
+  async function removeAvatar() {
+    if (!userId) return
 
-    const url = `${data.publicUrl}?v=${Date.now()}`
+    setUploading(true)
+    setError('')
 
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
-        avatar_url: url,
+    const previousAvatar =
+      avatarUrl
+
+    /*
+     * UI ottimistica:
+     * la foto sparisce subito.
+     */
+    setAvatarUrl('')
+
+    try {
+      const {
+        error:
+          updateError,
+      } =
+        await supabase
+          .from('profiles')
+          .update({
+            avatar_url:
+              null,
+          })
+          .eq(
+            'id',
+            userId
+          )
+
+      if (updateError) {
+        throw updateError
+      }
+
+      /*
+       * Puliamo sia il nuovo
+       * avatar.webp sia eventuali
+       * vecchi avatar caricati
+       * con estensioni diverse.
+       */
+      const {
+        data: files,
+      } =
+        await supabase.storage
+          .from('avatars')
+          .list(
+            userId
+          )
+
+      const paths =
+        (files ?? [])
+          .filter(
+            (
+              item: {
+                name: string
+              }
+            ) =>
+              item.name.startsWith(
+                'avatar.'
+              )
+          )
+          .map(
+            (
+              item: {
+                name: string
+              }
+            ) =>
+              `${userId}/${item.name}`
+          )
+
+      if (
+        paths.length >
+        0
+      ) {
+        await supabase.storage
+          .from('avatars')
+          .remove(
+            paths
+          )
+      }
+
+      writeProfileIdentity({
+        userId,
+        fullName,
+        avatarUrl: '',
       })
-      .eq('id', userId)
 
-    if (updateError) {
-      setError(updateError.message)
-    } else {
-      setAvatarUrl(url)
+      removeCaches([
+        `profile:${userId}`,
+      ])
+
+      haptic('success')
+    } catch (
+      removeError
+    ) {
+      setAvatarUrl(
+        previousAvatar
+      )
+
+      setError(
+        removeError
+          instanceof Error
+          ? removeError.message
+          : 'Non è stato possibile eliminare la foto.'
+      )
+
+      haptic('error')
+    } finally {
+      setUploading(false)
     }
-
-    setUploading(false)
   }
 
   async function changePassword(
@@ -635,11 +874,19 @@ export default function ProfilePage() {
             </label>
           </div>
 
-          {uploading && (
+          {uploading ? (
             <p className="text-[#8e8e93] text-xs mt-3">
-              Caricamento foto…
+              Ottimizzazione foto…
             </p>
-          )}
+          ) : avatarUrl ? (
+            <button
+              type="button"
+              onClick={removeAvatar}
+              className="text-[#ff3b30] text-xs font-semibold mt-3 exl-press"
+            >
+              Rimuovi foto
+            </button>
+          ) : null}
 
           <h1 className="text-[34px] font-bold tracking-[-0.045em] mt-5">
             {fullName || 'Il tuo profilo'}

@@ -20,21 +20,14 @@ export default function Template({
   return (
     <motion.div
       initial={{
-        opacity: 0.985,
-        y: 3,
+        opacity: 0.96,
       }}
       animate={{
         opacity: 1,
-        y: 0,
       }}
       transition={{
-        duration: 0.16,
-        ease: [
-          0.22,
-          1,
-          0.36,
-          1,
-        ],
+        duration: 0.10,
+        ease: 'easeOut',
       }}
     >
       {children}

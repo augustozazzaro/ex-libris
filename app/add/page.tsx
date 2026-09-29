@@ -560,12 +560,228 @@ export default function AddBookPage() {
         )
         .filter(Boolean)
 
+    /*
+      Controllo copie / edizioni.
+
+      - ISBN uguale = stessa edizione
+      - ISBN differente = edizione differente
+      - senza ISBN usiamo editore + anno + edizione
+        come controllo prudenziale
+    */
+
+    const cleanText = (
+      value: string | null | undefined
+    ) =>
+      (value ?? '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(
+          /[\u0300-\u036f]/g,
+          ''
+        )
+        .replace(
+          /\s+/g,
+          ' '
+        )
+
+    const draftIsbn13 =
+      draft.isbn13.trim()
+
+    const draftIsbn10 =
+      draft.isbn10.trim()
+
+    const {
+      data: titleMatches,
+    } =
+      await supabase
+        .from('books')
+        .select(`
+          id,
+          title,
+          isbn_10,
+          isbn_13,
+          publisher,
+          publication_year,
+          edition,
+          edition_key,
+          copy_number
+        `)
+        .eq(
+          'family_id',
+          membership.family_id
+        )
+        .ilike(
+          'title',
+          draft.title.trim()
+        )
+
+    const sameEdition =
+      (titleMatches ?? [])
+        .find(
+          (
+            existing: {
+              id: string
+              title: string
+              isbn_10: string | null
+              isbn_13: string | null
+              publisher: string | null
+              publication_year: number | null
+              edition: string | null
+              edition_key: string | null
+              copy_number: number | null
+            }
+          ) => {
+            const existing13 =
+              (
+                existing.isbn_13 ??
+                ''
+              ).trim()
+
+            const existing10 =
+              (
+                existing.isbn_10 ??
+                ''
+              ).trim()
+
+            const hasDraftIsbn =
+              Boolean(
+                draftIsbn13 ||
+                draftIsbn10
+              )
+
+            const hasExistingIsbn =
+              Boolean(
+                existing13 ||
+                existing10
+              )
+
+            if (
+              hasDraftIsbn &&
+              hasExistingIsbn
+            ) {
+              return Boolean(
+                (
+                  draftIsbn13 &&
+                  existing13 &&
+                  draftIsbn13 ===
+                    existing13
+                ) ||
+                (
+                  draftIsbn10 &&
+                  existing10 &&
+                  draftIsbn10 ===
+                    existing10
+                )
+              )
+            }
+
+            /*
+              Se uno dei due possiede un ISBN
+              e l'altro no, non presumiamo che
+              siano la stessa edizione.
+            */
+            if (
+              hasDraftIsbn !==
+              hasExistingIsbn
+            ) {
+              return false
+            }
+
+            const samePublisher =
+              cleanText(
+                existing.publisher
+              ) ===
+              cleanText(
+                draft.publisher
+              )
+
+            const sameYear =
+              (
+                existing.publication_year ??
+                null
+              ) ===
+              publicationYear
+
+            const sameEditionLabel =
+              cleanText(
+                existing.edition
+              ) ===
+              cleanText(
+                draft.edition
+              )
+
+            return (
+              samePublisher &&
+              sameYear &&
+              sameEditionLabel
+            )
+          }
+        )
+
+    let editionKey =
+      crypto.randomUUID()
+
+    let copyNumber = 1
+
+    if (sameEdition) {
+      const confirmed =
+        window.confirm(
+          `Questa edizione di "${draft.title.trim()}" è già presente nella biblioteca. Vuoi aggiungere un'altra copia?`
+        )
+
+      if (!confirmed) {
+        setSaving(false)
+        return
+      }
+
+      editionKey =
+        sameEdition.edition_key ||
+        sameEdition.id
+
+      const {
+        data: existingCopies,
+      } =
+        await supabase
+          .from('books')
+          .select('copy_number')
+          .eq(
+            'family_id',
+            membership.family_id
+          )
+          .eq(
+            'edition_key',
+            editionKey
+          )
+          .order(
+            'copy_number',
+            {
+              ascending: false,
+            }
+          )
+          .limit(1)
+
+      copyNumber =
+        (
+          existingCopies?.[0]
+            ?.copy_number ??
+          sameEdition.copy_number ??
+          1
+        ) + 1
+    }
+
     const { error: insertError } =
       await supabase
         .from('books')
         .insert({
           family_id:
             membership.family_id,
+
+          edition_key:
+            editionKey,
+
+          copy_number:
+            copyNumber,
 
           isbn_10:
             draft.isbn10 ||

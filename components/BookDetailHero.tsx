@@ -19,6 +19,7 @@ type Props = {
   publisher?: string | null
   publicationYear?: number | null
   pages?: number | null
+  copyCount?: number
   status?: string | null
   coverUrl?: string | null
   locationPath?: string | null
@@ -31,6 +32,7 @@ export default function BookDetailHero({
   publisher,
   publicationYear,
   pages,
+  copyCount = 1,
   status,
   coverUrl,
   locationPath,
@@ -179,6 +181,18 @@ export default function BookDetailHero({
 
                 <p className="font-semibold text-[17px] mt-0.5">
                   {pages}
+                </p>
+              </div>
+            )}
+
+            {copyCount > 1 && (
+              <div className="text-center">
+                <p className="text-[#8e8e93] text-[10px] uppercase tracking-[0.08em]">
+                  Copie
+                </p>
+
+                <p className="font-semibold text-[17px] mt-0.5">
+                  {copyCount}
                 </p>
               </div>
             )}

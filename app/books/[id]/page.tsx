@@ -84,12 +84,16 @@ type Book = {
   notes: string | null
 
   location_id: string | null
+
+  edition_key: string | null
+  copy_number: number | null
 }
 
 type BookDetailSnapshot = {
   book: Book
   locations: LocationItem[]
   personalFavorite: boolean
+  copyCount: number
 }
 
 export default function BookPage() {
@@ -109,6 +113,9 @@ export default function BookPage() {
 
   const [personalFavorite, setPersonalFavorite] =
     useState(false)
+
+  const [copyCount, setCopyCount] =
+    useState(1)
 
   const [loading, setLoading] =
     useState(true)
@@ -191,6 +198,10 @@ export default function BookPage() {
 
     setPersonalFavorite(
       snapshot.personalFavorite
+    )
+
+    setCopyCount(
+      snapshot.copyCount
     )
 
     setLocations(
@@ -358,6 +369,7 @@ export default function BookPage() {
     const [
       personalResult,
       locationsResult,
+      copiesResult,
     ] =
       await Promise.all([
         supabase
@@ -387,6 +399,25 @@ export default function BookPage() {
             'family_id',
             data.family_id
           ),
+
+        supabase
+          .from('books')
+          .select(
+            'id',
+            {
+              count: 'exact',
+              head: true,
+            }
+          )
+          .eq(
+            'family_id',
+            data.family_id
+          )
+          .eq(
+            'edition_key',
+            data.edition_key ??
+              data.id
+          ),
       ])
 
     const snapshot:
@@ -404,6 +435,10 @@ export default function BookPage() {
           personalResult.data
             ?.favorite ??
           false,
+
+        copyCount:
+          copiesResult.count ??
+          1,
       }
 
     applyBookSnapshot(
@@ -980,6 +1015,7 @@ export default function BookPage() {
                 book.publication_year
               }
               pages={book.pages}
+              copyCount={copyCount}
               status={book.status}
               coverUrl={cover}
               locationPath={

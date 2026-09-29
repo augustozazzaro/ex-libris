@@ -93,6 +93,33 @@ export default function CatalogPage() {
     useState('')
 
   useEffect(() => {
+    if (
+      typeof window ===
+      'undefined'
+    ) {
+      return
+    }
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      )
+
+    const requestedLocation =
+      params.get(
+        'location'
+      )
+
+    if (
+      requestedLocation
+    ) {
+      setLocation(
+        requestedLocation
+      )
+    }
+  }, [])
+
+  useEffect(() => {
     async function loadCatalog() {
       setError('')
 
@@ -250,6 +277,55 @@ export default function CatalogPage() {
         item.location_type === 'shelf'
     )
 
+  const selectedLocationIds =
+    useMemo(() => {
+      if (
+        location === 'all'
+      ) {
+        return null
+      }
+
+      const ids =
+        new Set<string>([
+          location,
+        ])
+
+      let changed =
+        true
+
+      while (changed) {
+        changed =
+          false
+
+        for (
+          const item of
+          locations
+        ) {
+          if (
+            item.parent_id &&
+            ids.has(
+              item.parent_id
+            ) &&
+            !ids.has(
+              item.id
+            )
+          ) {
+            ids.add(
+              item.id
+            )
+
+            changed =
+              true
+          }
+        }
+      }
+
+      return ids
+    }, [
+      location,
+      locations,
+    ])
+
   const visibleBooks =
     useMemo(() => {
       const query =
@@ -283,8 +359,13 @@ export default function CatalogPage() {
           }
 
           if (
-            location !== 'all' &&
-            book.location_id !== location
+            selectedLocationIds &&
+            (
+              !book.location_id ||
+              !selectedLocationIds.has(
+                book.location_id
+              )
+            )
           ) {
             return false
           }
@@ -343,6 +424,7 @@ export default function CatalogPage() {
       status,
       location,
       sort,
+      selectedLocationIds,
     ])
 
   if (loading) {

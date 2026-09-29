@@ -452,3 +452,75 @@ body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
+
+/* ---------------------------------------------------------
+   EX LIBRIS — READING PROGRESS SLIDER
+--------------------------------------------------------- */
+
+.exl-bookmark-slider {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.exl-bookmark-slider::-webkit-slider-runnable-track {
+  height: 7px;
+  border-radius: 999px;
+  background:
+    rgba(94, 127, 163, 0.18);
+}
+
+.exl-bookmark-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 27px;
+  height: 27px;
+  margin-top: -10px;
+  border-radius: 999px;
+  background: #5E7FA3;
+  border: 4px solid rgba(255,255,255,0.94);
+  box-shadow:
+    0 3px 11px rgba(0,0,0,0.20);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.exl-bookmark-slider:active::-webkit-slider-thumb {
+  transform: scale(1.10);
+  box-shadow:
+    0 4px 15px rgba(0,0,0,0.24);
+}
+
+.exl-bookmark-slider::-moz-range-track {
+  height: 7px;
+  border-radius: 999px;
+  background:
+    rgba(94, 127, 163, 0.18);
+}
+
+.exl-bookmark-slider::-moz-range-thumb {
+  width: 23px;
+  height: 23px;
+  border-radius: 999px;
+  background: #5E7FA3;
+  border: 4px solid white;
+  box-shadow:
+    0 3px 11px rgba(0,0,0,0.20);
+}
+
+@media (prefers-color-scheme: dark) {
+  .exl-bookmark-slider::-webkit-slider-runnable-track {
+    background:
+      rgba(174, 199, 224, 0.18);
+  }
+
+  .exl-bookmark-slider::-webkit-slider-thumb {
+    border-color:
+      rgba(44,44,46,0.96);
+  }
+}
+

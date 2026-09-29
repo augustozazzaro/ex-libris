@@ -94,9 +94,91 @@ export default function ShufflePage() {
   const dragX =
     useMotionValue(0)
 
+  const dragProgress =
+    useTransform(
+      dragX,
+      [-140, 0, 140],
+      [1, 0, 1]
+    )
+
+  const nextCardScale =
+    useTransform(
+      dragProgress,
+      [0, 1],
+      [0.958, 0.99]
+    )
+
+  const nextCardY =
+    useTransform(
+      dragProgress,
+      [0, 1],
+      [10, 3]
+    )
+
+  const nextCardOpacity =
+    useTransform(
+      dragProgress,
+      [0, 1],
+      [0.76, 0.96]
+    )
 
   const dragThresholdRef =
     useRef(false)
+
+  useEffect(() => {
+    if (
+      typeof window ===
+        'undefined' ||
+      books.length === 0
+    ) {
+      return
+    }
+
+    const indexes = [
+      currentIndex,
+      (
+        currentIndex +
+        1
+      ) % books.length,
+      (
+        currentIndex +
+        2
+      ) % books.length,
+      (
+        currentIndex -
+        1 +
+        books.length
+      ) % books.length,
+    ]
+
+    for (
+      const index of
+      indexes
+    ) {
+      const item =
+        books[index]
+
+      if (!item) continue
+
+      const url =
+        item.custom_cover_url ||
+        item.cover_url
+
+      if (!url) continue
+
+      const image =
+        new Image()
+
+      image.decoding =
+        'async'
+
+      image.src =
+        url
+    }
+  }, [
+    books,
+    currentIndex,
+  ])
 
   useEffect(() => {
     loadBooks()
@@ -636,6 +718,13 @@ export default function ShufflePage() {
         )
       : null
 
+  const nextLocation =
+    nextBookData
+      ? buildLocationPath(
+          nextBookData.location_id
+        )
+      : ''
+
   return (
     <main className="exl-page overflow-x-hidden">
 
@@ -725,39 +814,88 @@ export default function ShufflePage() {
             </>
           )}
 
-          {/* CARD SUCCESSIVA: È GIÀ LÌ SOTTO */}
+          {/* CARD SUCCESSIVA: già pronta sotto quella corrente */}
           {nextBookData && (
             <motion.div
               aria-hidden
               style={{
                 scale:
-                  nextScale,
+                  nextCardScale,
+
                 y:
-                  nextY,
+                  nextCardY,
+
                 opacity:
-                  nextOpacity,
+                  nextCardOpacity,
+
                 willChange:
                   'transform, opacity',
               }}
-              className="absolute inset-x-2 top-2 bottom-5 rounded-[34px] overflow-hidden shadow-[0_14px_45px_rgba(0,0,0,0.08)]"
+              className="absolute inset-x-2 top-2 bottom-5 rounded-[34px] overflow-hidden bg-[#ECE6DA] dark:bg-[#272727] shadow-[0_13px_38px_rgba(0,0,0,0.09)] transform-gpu"
             >
-              <div className="absolute inset-0 bg-[#ddd7cc]" />
 
               {nextCover && (
                 <>
                   <div
-                    className="absolute inset-[-30px] bg-cover bg-center blur-[35px] opacity-55 scale-110"
+                    className="absolute inset-[-35px] bg-cover bg-center blur-[34px] opacity-[0.40] dark:opacity-[0.30] scale-110"
                     style={{
                       backgroundImage:
                         `url("${nextCover}")`,
                     }}
                   />
 
-                  <div className="absolute inset-0 bg-white/45 dark:bg-black/40" />
+                  <div className="absolute inset-0 bg-white/58 dark:bg-black/46" />
                 </>
               )}
 
               <div className="absolute inset-0 border border-white/40 dark:border-white/10 rounded-[34px]" />
+
+              <div className="relative h-full p-6 flex flex-col items-center justify-center">
+
+                <div className="w-[48%] max-w-[195px] aspect-[2/3] rounded-[18px] overflow-hidden shadow-[0_13px_32px_rgba(0,0,0,0.18)] bg-white/40">
+
+                  <BookCover
+                    title={
+                      nextBookData.title
+                    }
+                    authors={
+                      nextBookData.authors
+                    }
+                    coverUrl={
+                      nextCover
+                    }
+                    priority
+                  />
+
+                </div>
+
+                <p className="font-bold text-[20px] tracking-[-0.035em] text-center line-clamp-2 mt-4">
+                  {nextBookData.title}
+                </p>
+
+                {nextBookData.authors?.[0] && (
+                  <p className="text-[#6e6e73] dark:text-[#aeaeb2] text-[12px] mt-1 truncate max-w-[80%]">
+                    {nextBookData.authors[0]}
+                  </p>
+                )}
+
+                {nextLocation && (
+                  <div className="text-[#8e8e93] text-[10px] mt-3 flex items-center gap-1 max-w-[80%]">
+
+                    <MapPin
+                      size={10}
+                      className="shrink-0"
+                    />
+
+                    <span className="truncate">
+                      {nextLocation}
+                    </span>
+
+                  </div>
+                )}
+
+              </div>
+
             </motion.div>
           )}
 
@@ -772,10 +910,10 @@ export default function ShufflePage() {
               initial={{
                 x:
                   direction > 0
-                    ? 55
-                    : -55,
-                opacity: 0,
-                scale: 0.98,
+                    ? 18
+                    : -18,
+                opacity: 1,
+                scale: 0.992,
               }}
               animate={{
                 x: 0,

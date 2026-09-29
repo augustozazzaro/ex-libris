@@ -33,6 +33,10 @@ import BookCover from '@/components/BookCover'
 import {
   haptic,
 } from '@/utils/haptics'
+import {
+  readCache,
+  writeCache,
+} from '@/utils/exlibris-cache'
 
 type Book = {
   id: string
@@ -50,6 +54,11 @@ type Location = {
   id: string
   name: string
   parent_id: string | null
+}
+
+type ShuffleSnapshot = {
+  books: Book[]
+  locations: Location[]
 }
 
 export default function ShufflePage() {
@@ -84,28 +93,70 @@ export default function ShufflePage() {
   }, [])
 
   async function loadBooks() {
-    setLoading(true)
     setError('')
 
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session },
+    } =
+      await supabase.auth.getSession()
+
+    const user =
+      session?.user
 
     if (!user) {
-      setError('Sessione non disponibile.')
+      setError(
+        'Sessione non disponibile.'
+      )
       setLoading(false)
       return
     }
 
-    const { data: membership } =
+    const cacheKey =
+      `shuffle:${user.id}`
+
+    const cached =
+      readCache<ShuffleSnapshot>(
+        cacheKey
+      )
+
+    if (cached) {
+      setBooks(
+        cached.books
+      )
+
+      setLocations(
+        cached.locations
+      )
+
+      setCurrentIndex(0)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
+    const {
+      data: membership,
+      error: membershipError,
+    } =
       await supabase
         .from('family_members')
         .select('family_id')
-        .eq('user_id', user.id)
+        .eq(
+          'user_id',
+          user.id
+        )
         .maybeSingle()
 
-    if (!membership) {
-      setError('Biblioteca non trovata.')
+    if (
+      membershipError ||
+      !membership
+    ) {
+      if (!cached) {
+        setError(
+          'Biblioteca non trovata.'
+        )
+      }
+
       setLoading(false)
       return
     }
@@ -114,89 +165,139 @@ export default function ShufflePage() {
       booksResult,
       locationsResult,
       statesResult,
-    ] = await Promise.all([
-      supabase
-        .from('books')
-        .select(`
-          id,
-          title,
-          subtitle,
-          authors,
-          cover_url,
-          custom_cover_url,
-          description,
-          pages,
-          location_id
-        `)
-        .eq('family_id', membership.family_id),
+    ] =
+      await Promise.all([
+        supabase
+          .from('books')
+          .select(`
+            id,
+            title,
+            subtitle,
+            authors,
+            cover_url,
+            custom_cover_url,
+            description,
+            pages,
+            location_id
+          `)
+          .eq(
+            'family_id',
+            membership.family_id
+          ),
 
-      supabase
-        .from('locations')
-        .select(`
-          id,
-          name,
-          parent_id
-        `)
-        .eq('family_id', membership.family_id),
+        supabase
+          .from('locations')
+          .select(`
+            id,
+            name,
+            parent_id
+          `)
+          .eq(
+            'family_id',
+            membership.family_id
+          ),
 
-      supabase
-        .from('user_book_state')
-        .select(`
-          book_id,
-          reading_status
-        `)
-        .eq('user_id', user.id),
-    ])
+        supabase
+          .from('user_book_state')
+          .select(`
+            book_id,
+            reading_status
+          `)
+          .eq(
+            'user_id',
+            user.id
+          ),
+      ])
 
-    if (booksResult.error) {
-      setError(booksResult.error.message)
+    if (
+      booksResult.error
+    ) {
+      if (!cached) {
+        setError(
+          booksResult.error.message
+        )
+      }
+
       setLoading(false)
       return
     }
 
-    const readIds = new Set(
-      (statesResult.data ?? [])
-        .filter(
-          (
-            row: {
-              book_id: string
-              reading_status: string | null
-            }
-          ) =>
-            row.reading_status === 'read'
+    const readIds =
+      new Set(
+        (
+          statesResult.data ??
+          []
         )
-        .map(
-          (
-            row: {
-              book_id: string
-              reading_status: string | null
-            }
-          ) =>
-            row.book_id
-        )
-    )
+          .filter(
+            (
+              row: {
+                book_id: string
+                reading_status:
+                  string | null
+              }
+            ) =>
+              row.reading_status ===
+              'read'
+          )
+          .map(
+            (
+              row: {
+                book_id: string
+                reading_status:
+                  string | null
+              }
+            ) =>
+              row.book_id
+          )
+      )
 
     const available =
-      (booksResult.data ?? [])
-        .filter(
-          (
-            book: Book
-          ) =>
-            !readIds.has(book.id)
-        ) as Book[]
+      (
+        booksResult.data ??
+        []
+      ).filter(
+        (
+          book: Book
+        ) =>
+          !readIds.has(
+            book.id
+          )
+      ) as Book[]
 
     const shuffled =
       [...available].sort(
-        () => Math.random() - 0.5
+        () =>
+          Math.random() -
+          0.5
       )
 
-    setBooks(shuffled)
+    const snapshot:
+      ShuffleSnapshot = {
+        books:
+          shuffled,
+
+        locations:
+          (
+            locationsResult.data ??
+            []
+          ) as Location[],
+      }
+
+    setBooks(
+      snapshot.books
+    )
 
     setLocations(
-      (locationsResult.data ?? []) as Location[]
+      snapshot.locations
     )
 
     setCurrentIndex(0)
+
+    writeCache(
+      cacheKey,
+      snapshot
+    )
+
     setLoading(false)
   }
 

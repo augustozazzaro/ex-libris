@@ -144,6 +144,7 @@ export default function ReadingStateCard({
       removeCaches([
         `home:${user.id}`,
         `profile:${user.id}`,
+        `shuffle:${user.id}`,
       ])
     } else {
       haptic('error')

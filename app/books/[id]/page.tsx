@@ -30,6 +30,8 @@ import {
   haptic,
 } from '@/utils/haptics'
 import {
+  readCache,
+  writeCache,
   removeCaches,
 } from '@/utils/exlibris-cache'
 import LocationPicker from '@/components/LocationPicker'
@@ -82,6 +84,12 @@ type Book = {
   notes: string | null
 
   location_id: string | null
+}
+
+type BookDetailSnapshot = {
+  book: Book
+  locations: LocationItem[]
+  personalFavorite: boolean
 }
 
 export default function BookPage() {
@@ -173,40 +181,21 @@ export default function BookPage() {
   const [uploadingCover, setUploadingCover] =
     useState(false)
 
-  async function loadBook() {
-    setLoading(true)
-
-    const { data, error } =
-      await supabase
-        .from('books')
-        .select('*')
-        .eq('id', params.id)
-        .single()
-
-    if (error || !data) {
-      setError('Libro non trovato.')
-      setLoading(false)
-      return
-    }
+  function applyBookSnapshot(
+    snapshot: BookDetailSnapshot
+  ) {
+    const data =
+      snapshot.book
 
     setBook(data)
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    setPersonalFavorite(
+      snapshot.personalFavorite
+    )
 
-    if (user) {
-      const { data: personalState } = await supabase
-        .from('user_book_state')
-        .select('favorite')
-        .eq('user_id', user.id)
-        .eq('book_id', data.id)
-        .maybeSingle()
-
-      setPersonalFavorite(
-        personalState?.favorite ?? false
-      )
-    }
+    setLocations(
+      snapshot.locations
+    )
 
     setTitle(
       data.title ?? ''
@@ -224,7 +213,6 @@ export default function BookPage() {
     setPublisher(
       data.publisher ?? ''
     )
-
 
     setLanguage(
       data.language ?? ''
@@ -263,16 +251,18 @@ export default function BookPage() {
     )
 
     setBibliographicNotes(
-      data.bibliographic_notes ?? ''
+      data.bibliographic_notes ??
+        ''
     )
 
-
     setCustomCover(
-      data.custom_cover_url ?? ''
+      data.custom_cover_url ??
+        ''
     )
 
     setCoverUrlInput(
-      data.custom_cover_url ?? ''
+      data.custom_cover_url ??
+        ''
     )
 
     setPublicationYear(
@@ -296,24 +286,133 @@ export default function BookPage() {
     setNotes(
       data.notes ?? ''
     )
+  }
+
+  async function loadBook() {
+    setError('')
+
+    const bookId =
+      String(params.id)
 
     const {
-      data: locationData,
-    } = await supabase
-      .from('locations')
-      .select(`
-        id,
-        name,
-        location_type,
-        parent_id
-      `)
-      .eq(
-        'family_id',
-        data.family_id
+      data: { session },
+    } =
+      await supabase.auth.getSession()
+
+    const user =
+      session?.user
+
+    if (!user) {
+      setError(
+        'Sessione non disponibile.'
+      )
+      setLoading(false)
+      return
+    }
+
+    const cacheKey =
+      `book:${user.id}:${bookId}`
+
+    const cached =
+      readCache<BookDetailSnapshot>(
+        cacheKey
       )
 
-    setLocations(
-      locationData ?? []
+    if (cached) {
+      applyBookSnapshot(
+        cached
+      )
+
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .from('books')
+        .select('*')
+        .eq(
+          'id',
+          bookId
+        )
+        .single()
+
+    if (
+      error ||
+      !data
+    ) {
+      if (!cached) {
+        setError(
+          'Libro non trovato.'
+        )
+      }
+
+      setLoading(false)
+      return
+    }
+
+    const [
+      personalResult,
+      locationsResult,
+    ] =
+      await Promise.all([
+        supabase
+          .from(
+            'user_book_state'
+          )
+          .select('favorite')
+          .eq(
+            'user_id',
+            user.id
+          )
+          .eq(
+            'book_id',
+            data.id
+          )
+          .maybeSingle(),
+
+        supabase
+          .from('locations')
+          .select(`
+            id,
+            name,
+            location_type,
+            parent_id
+          `)
+          .eq(
+            'family_id',
+            data.family_id
+          ),
+      ])
+
+    const snapshot:
+      BookDetailSnapshot = {
+        book:
+          data as Book,
+
+        locations:
+          (
+            locationsResult.data ??
+            []
+          ) as LocationItem[],
+
+        personalFavorite:
+          personalResult.data
+            ?.favorite ??
+          false,
+      }
+
+    applyBookSnapshot(
+      snapshot
+    )
+
+    writeCache(
+      cacheKey,
+      snapshot
     )
 
     setLoading(false)
@@ -363,6 +462,7 @@ export default function BookPage() {
       removeCaches([
         `home:${user.id}`,
         `profile:${user.id}`,
+        `book:${user.id}:${book.id}`,
       ])
     } else {
       haptic('error')
@@ -738,6 +838,8 @@ export default function BookPage() {
         `home:${user.id}`,
         `catalog:${user.id}`,
         `profile:${user.id}`,
+        `shuffle:${user.id}`,
+        `book:${user.id}:${book.id}`,
       ])
     }
 
@@ -764,6 +866,20 @@ export default function BookPage() {
         .eq('id', book.id)
 
     if (!error) {
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser()
+
+      if (user) {
+        removeCaches([
+          `home:${user.id}`,
+          `catalog:${user.id}`,
+          `profile:${user.id}`,
+          `shuffle:${user.id}`,
+        ])
+      }
+
       router.push('/')
       router.refresh()
     }

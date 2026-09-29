@@ -705,6 +705,7 @@ export default function AddBookPage() {
       `home:${user.id}`,
       `catalog:${user.id}`,
       `profile:${user.id}`,
+      `shuffle:${user.id}`,
     ])
 
     setSaving(false)

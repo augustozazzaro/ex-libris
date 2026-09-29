@@ -1570,7 +1570,7 @@ function ReadingHomeTile({
       whileTap={{
         scale: 0.97,
       }}
-      className="min-w-[156px] snap-start"
+      className="min-w-[156px] snap-start py-1 first:ml-0 last:mr-1"
     >
       <Link
         href={href}

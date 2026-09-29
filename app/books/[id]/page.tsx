@@ -41,6 +41,8 @@ import BookSynopsis from '@/components/BookSynopsis'
 import BookMetadataSections from '@/components/BookMetadataSections'
 import BookContributors from '@/components/BookContributors'
 import ReadingStateCard from '@/components/ReadingStateCard'
+import BookBookmarkCard from '@/components/BookBookmarkCard'
+import ReadingPresence from '@/components/ReadingPresence'
 import BookCopiesPanel from '@/components/BookCopiesPanel'
 
 import {
@@ -1025,6 +1027,17 @@ export default function BookPage() {
               }
             />
 
+            {book.edition_key && (
+              <ReadingPresence
+                editionKey={
+                  book.edition_key
+                }
+                bookId={
+                  book.id
+                }
+              />
+            )}
+
             {copyCount > 1 &&
               book.edition_key && (
                 <BookCopiesPanel
@@ -1074,6 +1087,11 @@ export default function BookPage() {
 
             <ReadingStateCard
               bookId={book.id}
+            />
+
+            <BookBookmarkCard
+              bookId={book.id}
+              pages={book.pages}
             />
 
             <BookContributors

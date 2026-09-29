@@ -146,6 +146,21 @@ export default function ReadingStateCard({
         `profile:${user.id}`,
         `shuffle:${user.id}`,
       ])
+
+      window.dispatchEvent(
+        new CustomEvent(
+          'exlibris-reading-status-updated',
+          {
+            detail: {
+              bookId,
+              status:
+                newStatus,
+              readAt:
+                newReadAt,
+            },
+          }
+        )
+      )
     } else {
       haptic('error')
     }
@@ -179,6 +194,57 @@ export default function ReadingStateCard({
         }
       )
   }
+
+  useEffect(() => {
+    function handleExternalStatus(
+      event: Event
+    ) {
+      const custom =
+        event as CustomEvent<{
+          bookId?: string
+          status?: ReadingStatus
+          readAt?: string
+        }>
+
+      if (
+        custom.detail
+          ?.bookId !==
+        bookId
+      ) {
+        return
+      }
+
+      if (
+        custom.detail
+          ?.status
+      ) {
+        setStatus(
+          custom.detail.status
+        )
+      }
+
+      if (
+        custom.detail
+          ?.readAt !==
+        undefined
+      ) {
+        setReadAt(
+          custom.detail.readAt
+        )
+      }
+    }
+
+    window.addEventListener(
+      'exlibris-reading-status-updated',
+      handleExternalStatus
+    )
+
+    return () =>
+      window.removeEventListener(
+        'exlibris-reading-status-updated',
+        handleExternalStatus
+      )
+  }, [bookId])
 
   if (!ready) return null
 

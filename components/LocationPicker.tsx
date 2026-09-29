@@ -17,13 +17,17 @@ import {
   LibraryBig,
   MapPin,
   SquareStack,
-  X,
 } from 'lucide-react'
 
 import {
-  AnimatePresence,
   motion,
 } from 'framer-motion'
+
+import AdaptiveGlassModal from '@/components/glass/AdaptiveGlassModal'
+
+import {
+  haptic,
+} from '@/utils/haptics'
 
 export type PickerLocation = {
   id: string
@@ -142,6 +146,7 @@ export default function LocationPicker({
     ])
 
   function openPicker() {
+    haptic('light')
     if (value) {
       const selected =
         locationMap.get(value)
@@ -164,11 +169,13 @@ export default function LocationPicker({
   function choose(
     id: string
   ) {
+    haptic('success')
     onChange(id)
     setOpen(false)
   }
 
   function chooseNone() {
+    haptic('light')
     onChange('')
     setOpen(false)
   }
@@ -178,25 +185,12 @@ export default function LocationPicker({
       return
     }
 
+    haptic('light')
+
     setCurrentParent(
       currentLocation.parent_id
     )
   }
-
-  useEffect(() => {
-    if (!open) return
-
-    const original =
-      document.body.style.overflow
-
-    document.body.style.overflow =
-      'hidden'
-
-    return () => {
-      document.body.style.overflow =
-        original
-    }
-  }, [open])
 
   return (
     <>
@@ -261,299 +255,334 @@ export default function LocationPicker({
 
       </div>
 
-      <AnimatePresence>
-        {open && (
-          <>
+      <AdaptiveGlassModal
+        open={open}
+        onClose={closePicker}
+        eyebrow="Biblioteca"
+        title={
+          currentLocation
+            ? currentLocation.name
+            : 'Scegli posizione'
+        }
+        maxWidth="580px"
+      >
 
-            <motion.button
-              type="button"
-              aria-label="Chiudi"
-              onClick={closePicker}
-              initial={{
-                opacity: 0,
-              }}
-              animate={{
-                opacity: 1,
-              }}
-              exit={{
-                opacity: 0,
-              }}
-              className="fixed inset-0 z-[90] bg-black/25 backdrop-blur-[2px]"
-            />
+        <div className="px-4 pb-5">
 
-            <motion.div
-              initial={{
-                y: '100%',
-              }}
-              animate={{
-                y: 0,
-              }}
-              exit={{
-                y: '100%',
-              }}
-              transition={{
-                type: 'spring',
-                stiffness: 360,
-                damping: 34,
-              }}
-              className="fixed left-0 right-0 bottom-0 z-[100] px-2 pb-2"
-            >
+          {/* HEADER CON BACK */}
+          <div className="flex items-center gap-3 mt-1 mb-4">
 
-              <div className="max-w-xl mx-auto bg-[#f5f3ee]/95 dark:bg-[#1c1c1e]/95 backdrop-blur-3xl rounded-[30px] shadow-[0_-12px_50px_rgba(0,0,0,0.18)] overflow-hidden pb-[env(safe-area-inset-bottom)]">
+            {currentParent && (
+              <button
+                type="button"
+                onClick={goBack}
+                className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center exl-press shrink-0"
+                aria-label="Indietro"
+              >
+                <ChevronLeft
+                  size={20}
+                />
+              </button>
+            )}
 
-                <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mt-3" />
+            <div className="min-w-0">
 
-                <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+              <p className="text-[#8e8e93] text-xs">
+                Posizione del libro
+              </p>
 
-                  <div className="flex items-center gap-3">
+              <p className="font-semibold text-[15px] truncate mt-0.5">
+                {currentLocation
+                  ? typeName(
+                      currentLocation.location_type
+                    )
+                  : 'Esplora la biblioteca'}
+              </p>
 
-                    {currentParent && (
+            </div>
+
+          </div>
+
+          {/* BREADCRUMB */}
+          {currentPath.length > 0 && (
+            <div className="overflow-x-auto exl-scrollbar-none mb-4">
+
+              <div className="flex items-center gap-1.5 whitespace-nowrap min-w-max">
+
+                {currentPath.map(
+                  (
+                    location,
+                    index
+                  ) => (
+                    <div
+                      key={
+                        location.id
+                      }
+                      className="flex items-center gap-1.5"
+                    >
+
+                      {index > 0 && (
+                        <ChevronRight
+                          size={12}
+                          className="text-[#c7c7cc]"
+                        />
+                      )}
+
                       <button
                         type="button"
-                        onClick={goBack}
-                        className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center exl-press"
+                        onClick={() => {
+                          haptic('light')
+
+                          setCurrentParent(
+                            location.id
+                          )
+                        }}
+                        className="px-2.5 py-1.5 rounded-full bg-black/[0.04] dark:bg-white/[0.08] text-[#6e6e73] dark:text-[#d1d1d6] text-[11px] font-medium exl-press"
                       >
-                        <ChevronLeft
-                          size={20}
-                        />
+                        {
+                          location.name
+                        }
                       </button>
-                    )}
-
-                    <div>
-
-                      <p className="text-[#8e8e93] text-xs">
-                        Posizione del libro
-                      </p>
-
-                      <h2 className="text-[21px] font-bold tracking-[-0.025em] mt-0.5">
-                        {currentLocation
-                          ? currentLocation.name
-                          : 'Scegli posizione'}
-                      </h2>
 
                     </div>
+                  )
+                )}
 
-                  </div>
+              </div>
 
-                  <button
-                    type="button"
-                    onClick={closePicker}
-                    className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center exl-press"
-                  >
-                    <X size={18} />
-                  </button>
+            </div>
+          )}
+
+          {/* USA POSIZIONE CORRENTE */}
+          {currentLocation && (
+            <motion.button
+              type="button"
+              onClick={() =>
+                choose(
+                  currentLocation.id
+                )
+              }
+              whileTap={{
+                scale: 0.985,
+              }}
+              className="w-full bg-black text-white dark:bg-white dark:text-black rounded-[19px] px-4 py-4 flex items-center justify-center gap-2 font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] exl-press mb-3"
+            >
+              <Check
+                size={18}
+              />
+
+              Usa questa posizione
+            </motion.button>
+          )}
+
+          {/* LISTA */}
+          <motion.div
+            key={
+              currentParent ??
+              'root'
+            }
+            initial={{
+              opacity: 0,
+              x: 12,
+            }}
+            animate={{
+              opacity: 1,
+              x: 0,
+            }}
+            transition={{
+              duration: 0.2,
+            }}
+            className="rounded-[24px] overflow-hidden bg-white/45 dark:bg-white/[0.055] border border-white/45 dark:border-white/[0.07]"
+          >
+
+            {!currentParent && (
+              <button
+                type="button"
+                onClick={
+                  chooseNone
+                }
+                className="w-full px-4 py-4 flex items-center gap-4 text-left exl-press border-b border-black/5 dark:border-white/10"
+              >
+
+                <div className="w-11 h-11 rounded-[14px] bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+
+                  <MapPin
+                    size={20}
+                    className="text-[#8e8e93]"
+                  />
 
                 </div>
 
-                {currentPath.length > 1 && (
-                  <div className="px-5 pb-3 overflow-x-auto exl-scrollbar-none">
+                <div className="flex-1 min-w-0">
 
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                  <p className="font-medium">
+                    Nessuna posizione
+                  </p>
 
-                      {currentPath.map(
-                        (
-                          location,
-                          index
-                        ) => (
-                          <div
-                            key={
-                              location.id
-                            }
-                            className="flex items-center gap-1.5"
-                          >
+                  <p className="text-[#8e8e93] text-xs mt-0.5">
+                    Lascia il libro senza collocazione
+                  </p>
 
-                            {index >
-                              0 && (
-                              <ChevronRight
-                                size={13}
-                                className="text-[#c7c7cc]"
-                              />
-                            )}
+                </div>
 
-                            <span className="text-[#8e8e93] text-xs">
-                              {
-                                location.name
-                              }
-                            </span>
+                {!value && (
+                  <div className="w-7 h-7 rounded-full bg-[#5E7FA3]/12 flex items-center justify-center">
 
-                          </div>
-                        )
-                      )}
-
-                    </div>
+                    <Check
+                      size={16}
+                      className="text-[#5E7FA3]"
+                    />
 
                   </div>
                 )}
 
-                <div className="px-4 pb-4 max-h-[55vh] overflow-y-auto">
+              </button>
+            )}
 
-                  {currentLocation && (
-                    <button
-                      type="button"
-                      onClick={() =>
+            {children.map(
+              (
+                location,
+                index
+              ) => {
+                const hasChildren =
+                  locations.some(
+                    item =>
+                      item.parent_id ===
+                      location.id
+                  )
+
+                const selected =
+                  location.id ===
+                  value
+
+                return (
+                  <motion.button
+                    key={
+                      location.id
+                    }
+                    type="button"
+                    initial={{
+                      opacity: 0,
+                      y: 5,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    transition={{
+                      delay:
+                        Math.min(
+                          index *
+                            0.025,
+                          0.16
+                        ),
+                    }}
+                    onClick={() => {
+                      if (
+                        hasChildren
+                      ) {
+                        haptic(
+                          'light'
+                        )
+
+                        setCurrentParent(
+                          location.id
+                        )
+                      } else {
                         choose(
-                          currentLocation.id
+                          location.id
                         )
                       }
-                      className="w-full bg-black text-white rounded-[18px] px-4 py-4 flex items-center justify-center gap-2 font-semibold exl-press mb-3"
-                    >
-                      <Check
-                        size={18}
-                      />
-                      Usa questa posizione
-                    </button>
-                  )}
+                    }}
+                    className={`w-full px-4 py-3.5 flex items-center gap-4 text-left exl-press ${
+                      index > 0 ||
+                      !currentParent
+                        ? 'border-t border-black/5 dark:border-white/10'
+                        : ''
+                    }`}
+                  >
 
-                  <div className="bg-white/65 dark:bg-white/[0.07] rounded-[22px] overflow-hidden">
+                    <div className="w-11 h-11 rounded-[14px] bg-[#5E7FA3]/12 flex items-center justify-center shrink-0">
 
-                    {!currentParent && (
-                      <button
-                        type="button"
-                        onClick={
-                          chooseNone
+                      <LocationTypeIcon
+                        type={
+                          location.location_type
                         }
-                        className="w-full px-4 py-4 flex items-center gap-4 text-left exl-press border-b border-black/5 dark:border-white/10"
-                      >
+                      />
 
-                        <div className="w-11 h-11 rounded-[14px] bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+                    </div>
 
-                          <MapPin
-                            size={20}
-                            className="text-[#8e8e93]"
-                          />
+                    <div className="flex-1 min-w-0">
 
-                        </div>
+                      <p className="font-medium truncate">
+                        {
+                          location.name
+                        }
+                      </p>
 
-                        <div className="flex-1">
-
-                          <p className="font-medium">
-                            Nessuna posizione
-                          </p>
-
-                          <p className="text-[#8e8e93] text-xs mt-0.5">
-                            Lascia il libro senza collocazione
-                          </p>
-
-                        </div>
-
-                        {!value && (
-                          <Check
-                            size={18}
-                            className="text-[#5E7FA3]"
-                          />
+                      <p className="text-[#8e8e93] text-xs mt-0.5">
+                        {typeName(
+                          location.location_type
                         )}
 
-                      </button>
-                    )}
+                        {hasChildren
+                          ? ' · Esplora'
+                          : ' · Seleziona'}
+                      </p>
 
-                    {children.map(
-                      (
-                        location,
-                        index
-                      ) => {
-                        const hasChildren =
-                          locations.some(
-                            (item) =>
-                              item.parent_id ===
-                              location.id
-                          )
+                    </div>
 
-                        const selected =
-                          location.id ===
-                          value
+                    {selected ? (
+                      <div className="w-7 h-7 rounded-full bg-[#5E7FA3]/12 flex items-center justify-center shrink-0">
 
-                        return (
-                          <button
-                            key={
-                              location.id
-                            }
-                            type="button"
-                            onClick={() => {
-                              if (
-                                hasChildren
-                              ) {
-                                setCurrentParent(
-                                  location.id
-                                )
-                              } else {
-                                choose(
-                                  location.id
-                                )
-                              }
-                            }}
-                            className={`w-full px-4 py-3.5 flex items-center gap-4 text-left exl-press ${
-                              index > 0 ||
-                              !currentParent
-                                ? 'border-t border-black/5 dark:border-white/10'
-                                : ''
-                            }`}
-                          >
+                        <Check
+                          size={16}
+                          className="text-[#5E7FA3]"
+                        />
 
-                            <div className="w-11 h-11 rounded-[14px] bg-[#5E7FA3]/12 flex items-center justify-center shrink-0">
+                      </div>
+                    ) : hasChildren ? (
+                      <ChevronRight
+                        size={18}
+                        className="text-[#c7c7cc] shrink-0"
+                      />
+                    ) : null}
 
-                              <LocationTypeIcon
-                                type={
-                                  location.location_type
-                                }
-                              />
+                  </motion.button>
+                )
+              }
+            )}
 
-                            </div>
+          </motion.div>
 
-                            <div className="flex-1 min-w-0">
+          {children.length ===
+            0 &&
+            currentLocation && (
+            <div className="text-center py-8">
 
-                              <p className="font-medium truncate">
-                                {
-                                  location.name
-                                }
-                              </p>
+              <div className="w-12 h-12 rounded-[16px] bg-black/5 dark:bg-white/10 mx-auto flex items-center justify-center">
 
-                              <p className="text-[#8e8e93] text-xs mt-0.5">
-                                {typeName(
-                                  location.location_type
-                                )}
-                                {hasChildren
-                                  ? ' · Apri'
-                                  : ' · Seleziona'}
-                              </p>
-
-                            </div>
-
-                            {selected ? (
-                              <Check
-                                size={19}
-                                className="text-[#5E7FA3] shrink-0"
-                              />
-                            ) : hasChildren ? (
-                              <ChevronRight
-                                size={18}
-                                className="text-[#c7c7cc] shrink-0"
-                              />
-                            ) : null}
-
-                          </button>
-                        )
-                      }
-                    )}
-
-                  </div>
-
-                  {children.length ===
-                    0 &&
-                    currentLocation && (
-                    <p className="text-center text-[#8e8e93] text-sm py-7">
-                      Nessuna posizione al suo interno.
-                    </p>
-                  )}
-
-                </div>
+                <MapPin
+                  size={20}
+                  className="text-[#8e8e93]"
+                />
 
               </div>
 
-            </motion.div>
+              <p className="text-[#8e8e93] text-sm mt-3">
+                Nessuna posizione al suo interno.
+              </p>
 
-          </>
-        )}
-      </AnimatePresence>
+              <p className="text-[#aeaeb2] text-xs mt-1">
+                Puoi usare direttamente questa posizione.
+              </p>
+
+            </div>
+          )}
+
+        </div>
+
+      </AdaptiveGlassModal>
     </>
   )
 }

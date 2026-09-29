@@ -6,13 +6,19 @@ import {
 } from 'react'
 
 import {
+  ArrowUpRight,
   BookCheck,
+  Check,
+  ChevronRight,
   MapPin,
   Pencil,
   Trash2,
-  X,
-  ArrowUpRight,
 } from 'lucide-react'
+
+import {
+  AnimatePresence,
+  motion,
+} from 'framer-motion'
 
 import {
   useRouter,
@@ -37,6 +43,7 @@ import {
 
 import LocationPicker from '@/components/LocationPicker'
 import ExLibrisConfirmDialog from '@/components/ExLibrisConfirmDialog'
+import AdaptiveGlassModal from '@/components/glass/AdaptiveGlassModal'
 
 type Copy = {
   id: string
@@ -70,23 +77,34 @@ export default function BookCopiesPanel({
     useState<Copy[]>([])
 
   const [
-    editingCopyId,
-    setEditingCopyId,
-  ] = useState<string | null>(
-    null
-  )
+    editingCopy,
+    setEditingCopy,
+  ] =
+    useState<Copy | null>(
+      null
+    )
 
   const [
     editingLocation,
     setEditingLocation,
-  ] = useState('')
+  ] =
+    useState('')
 
   const [
     copyToDelete,
     setCopyToDelete,
-  ] = useState<Copy | null>(
-    null
-  )
+  ] =
+    useState<Copy | null>(
+      null
+    )
+
+  const [
+    blockedCopy,
+    setBlockedCopy,
+  ] =
+    useState<Copy | null>(
+      null
+    )
 
   const [saving, setSaving] =
     useState(false)
@@ -144,8 +162,10 @@ export default function BookCopiesPanel({
   function startEditing(
     copy: Copy
   ) {
-    setEditingCopyId(
-      copy.id
+    haptic('light')
+
+    setEditingCopy(
+      copy
     )
 
     setEditingLocation(
@@ -153,9 +173,20 @@ export default function BookCopiesPanel({
     )
   }
 
-  async function saveLocation(
-    copy: Copy
-  ) {
+  function closeEditor() {
+    setEditingCopy(null)
+    setEditingLocation('')
+    setError('')
+  }
+
+  async function saveLocation() {
+    if (!editingCopy) {
+      return
+    }
+
+    const copy =
+      editingCopy
+
     setSaving(true)
     setError('')
 
@@ -178,6 +209,7 @@ export default function BookCopiesPanel({
       setError(
         error.message
       )
+
       haptic('error')
       setSaving(false)
       return
@@ -201,7 +233,8 @@ export default function BookCopiesPanel({
 
     haptic('success')
 
-    setEditingCopyId(null)
+    closeEditor()
+
     setSaving(false)
 
     await loadCopies()
@@ -212,6 +245,27 @@ export default function BookCopiesPanel({
     ) {
       onChanged?.()
     }
+  }
+
+  function requestDelete(
+    copy: Copy
+  ) {
+    haptic('light')
+
+    if (
+      copy.status ===
+      'loaned'
+    ) {
+      setBlockedCopy(
+        copy
+      )
+
+      return
+    }
+
+    setCopyToDelete(
+      copy
+    )
   }
 
   async function deleteCopy() {
@@ -248,6 +302,7 @@ export default function BookCopiesPanel({
       setError(
         error.message
       )
+
       haptic('error')
       setSaving(false)
       return
@@ -294,6 +349,7 @@ export default function BookCopiesPanel({
     setSaving(false)
 
     await loadCopies()
+
     onChanged?.()
   }
 
@@ -305,199 +361,341 @@ export default function BookCopiesPanel({
 
   return (
     <>
-      <section className="exl-glass exl-card p-5 mt-5">
+      <section className="mt-5">
 
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex items-end justify-between gap-4 px-1">
 
           <div>
-            <p className="text-[#8e8e93] text-xs uppercase tracking-[0.08em]">
+
+            <p className="text-[#8e8e93] text-[11px] uppercase tracking-[0.08em]">
               Biblioteca
             </p>
 
-            <h2 className="font-bold text-[19px] tracking-[-0.02em] mt-1">
-              {copies.length} copie
+            <h2 className="font-bold text-[20px] tracking-[-0.025em] mt-1">
+              Le tue copie
             </h2>
+
           </div>
 
-          <span className="text-[#8e8e93] text-xs">
-            Gestiscile separatamente
-          </span>
+          <div className="h-8 px-3 rounded-full bg-black/[0.045] dark:bg-white/[0.08] flex items-center text-[#8e8e93] text-xs font-semibold">
+            {copies.length}{' '}
+            copie
+          </div>
 
         </div>
 
-        <div className="mt-4 divide-y divide-black/5 dark:divide-white/10">
+        <div className="space-y-2.5 mt-4">
 
-          {copies.map(
-            copy => {
-              const isCurrent =
-                copy.id ===
-                currentBookId
+          <AnimatePresence
+            initial={false}
+          >
+            {copies.map(
+              (
+                copy,
+                index
+              ) => {
+                const isCurrent =
+                  copy.id ===
+                  currentBookId
 
-              const location =
-                buildLocationPath(
-                  copy.location_id,
-                  locations
-                )
+                const location =
+                  buildLocationPath(
+                    copy.location_id,
+                    locations
+                  )
 
-              const loaned =
-                copy.status ===
-                'loaned'
+                const loaned =
+                  copy.status ===
+                  'loaned'
 
-              return (
-                <div
-                  key={copy.id}
-                  className="py-4 first:pt-1 last:pb-0"
-                >
-                  <div className="flex items-start gap-3">
+                return (
+                  <motion.article
+                    layout
+                    key={
+                      copy.id
+                    }
+                    initial={{
+                      opacity: 0,
+                      y: 8,
+                      scale:
+                        0.985,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                    }}
+                    exit={{
+                      opacity: 0,
+                      x: -20,
+                      scale:
+                        0.97,
+                    }}
+                    transition={{
+                      delay:
+                        Math.min(
+                          index *
+                            0.035,
+                          0.15
+                        ),
+                      type:
+                        'spring',
+                      stiffness:
+                        320,
+                      damping:
+                        29,
+                    }}
+                    className={`relative overflow-hidden rounded-[24px] border ${
+                      isCurrent
+                        ? 'border-[#5E7FA3]/25 bg-[#5E7FA3]/[0.065]'
+                        : 'border-white/45 dark:border-white/[0.07] bg-white/48 dark:bg-white/[0.055]'
+                    } backdrop-blur-[18px]`}
+                  >
 
-                    <div className="w-10 h-10 rounded-[14px] bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
-                      {loaned ? (
-                        <ArrowUpRight
-                          size={18}
-                        />
-                      ) : (
-                        <BookCheck
-                          size={18}
-                        />
-                      )}
-                    </div>
+                    {isCurrent && (
+                      <div className="absolute inset-y-0 left-0 w-[3px] bg-[#5E7FA3]" />
+                    )}
 
-                    <div className="min-w-0 flex-1">
+                    <div className="p-4 flex items-center gap-3.5">
 
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold">
-                          Copia {copy.copy_number ?? 1}
-                        </p>
-
-                        {isCurrent && (
-                          <span className="text-[10px] uppercase tracking-[0.06em] bg-black text-white dark:bg-white dark:text-black rounded-full px-2 py-1">
-                            Questa
-                          </span>
+                      <div
+                        className={`w-12 h-12 rounded-[16px] flex items-center justify-center shrink-0 ${
+                          loaned
+                            ? 'bg-[#C76955]/12 text-[#C76955]'
+                            : 'bg-[#5E7FA3]/12 text-[#5E7FA3]'
+                        }`}
+                      >
+                        {loaned ? (
+                          <ArrowUpRight
+                            size={21}
+                          />
+                        ) : (
+                          <BookCheck
+                            size={21}
+                          />
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1.5 mt-1 text-[#8e8e93] text-[13px]">
-                        <MapPin
-                          size={13}
-                          className="shrink-0"
-                        />
+                      <div className="min-w-0 flex-1">
 
-                        <span className="truncate">
-                          {location ||
-                            'Posizione non indicata'}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+
+                          <p className="font-bold tracking-[-0.015em]">
+                            Copia{' '}
+                            {copy.copy_number ??
+                              index +
+                                1}
+                          </p>
+
+                          {isCurrent && (
+                            <span className="rounded-full bg-[#5E7FA3] text-white px-2 py-1 text-[9px] leading-none font-bold uppercase tracking-[0.07em]">
+                              Questa
+                            </span>
+                          )}
+
+                        </div>
+
+                        <div
+                          className={`flex items-center gap-1.5 mt-1.5 text-[12px] font-medium ${
+                            loaned
+                              ? 'text-[#C76955]'
+                              : 'text-[#5E7FA3]'
+                          }`}
+                        >
+                          {loaned ? (
+                            <ArrowUpRight
+                              size={12}
+                            />
+                          ) : (
+                            <Check
+                              size={12}
+                            />
+                          )}
+
+                          {loaned
+                            ? 'In prestito'
+                            : 'In biblioteca'}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 mt-1.5 text-[#8e8e93] text-[12px]">
+
+                          <MapPin
+                            size={12}
+                            className="shrink-0"
+                          />
+
+                          <span className="truncate">
+                            {location ||
+                              'Posizione non indicata'}
+                          </span>
+
+                        </div>
+
                       </div>
 
-                      <p className="text-[12px] text-[#8e8e93] mt-1">
-                        {loaned
-                          ? 'In prestito'
-                          : 'In biblioteca'}
-                      </p>
-
-                    </div>
-
-                    <div className="flex gap-1">
-
                       <button
+                        type="button"
                         onClick={() =>
                           startEditing(
                             copy
                           )
                         }
-                        className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center exl-press"
-                        aria-label="Modifica posizione"
+                        className="w-10 h-10 rounded-full bg-black/[0.045] dark:bg-white/[0.09] flex items-center justify-center shrink-0 exl-press"
+                        aria-label={`Gestisci copia ${copy.copy_number ?? index + 1}`}
                       >
-                        <Pencil
-                          size={15}
-                        />
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          setCopyToDelete(
-                            copy
-                          )
-                        }
-                        className="w-9 h-9 rounded-full bg-[#ff3b30]/10 text-[#ff3b30] flex items-center justify-center exl-press"
-                        aria-label="Elimina copia"
-                      >
-                        <Trash2
-                          size={15}
+                        <ChevronRight
+                          size={18}
+                          className="text-[#8e8e93]"
                         />
                       </button>
 
                     </div>
 
-                  </div>
-
-                  {editingCopyId ===
-                    copy.id && (
-                    <div className="mt-4 ml-0 md:ml-[52px] bg-black/[0.025] dark:bg-white/[0.05] rounded-[20px] p-3">
-
-                      <div className="flex items-center justify-between mb-3">
-
-                        <p className="font-semibold text-sm">
-                          Posizione copia
-                        </p>
-
-                        <button
-                          onClick={() =>
-                            setEditingCopyId(
-                              null
-                            )
-                          }
-                          className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center"
-                        >
-                          <X
-                            size={15}
-                          />
-                        </button>
-
-                      </div>
-
-                      <LocationPicker
-                        locations={
-                          locations
-                        }
-                        value={
-                          editingLocation
-                        }
-                        onChange={
-                          setEditingLocation
-                        }
-                      />
-
-                      <button
-                        disabled={saving}
-                        onClick={() =>
-                          saveLocation(
-                            copy
-                          )
-                        }
-                        className="w-full bg-black text-white dark:bg-white dark:text-black rounded-[17px] py-3.5 font-semibold mt-3 exl-press disabled:opacity-50"
-                      >
-                        {saving
-                          ? 'Salvataggio…'
-                          : 'Salva posizione'}
-                      </button>
-
-                    </div>
-                  )}
-
-                </div>
-              )
-            }
-          )}
+                  </motion.article>
+                )
+              }
+            )}
+          </AnimatePresence>
 
         </div>
 
-        {error && (
-          <p className="text-[#ff3b30] text-sm mt-4">
+        {error &&
+          !editingCopy && (
+          <p className="text-[#ff3b30] text-sm mt-3 px-1">
             {error}
           </p>
         )}
 
       </section>
+
+      <AdaptiveGlassModal
+        open={
+          Boolean(
+            editingCopy
+          )
+        }
+        onClose={
+          closeEditor
+        }
+        eyebrow="Biblioteca"
+        title={
+          editingCopy
+            ? `Copia ${editingCopy.copy_number ?? 1}`
+            : 'Gestisci copia'
+        }
+        maxWidth="520px"
+      >
+
+        {editingCopy && (
+          <div className="px-5 pb-5">
+
+            <div className="flex items-center gap-3 py-2">
+
+              <div
+                className={`w-12 h-12 rounded-[16px] flex items-center justify-center ${
+                  editingCopy.status ===
+                  'loaned'
+                    ? 'bg-[#C76955]/12 text-[#C76955]'
+                    : 'bg-[#5E7FA3]/12 text-[#5E7FA3]'
+                }`}
+              >
+                {editingCopy.status ===
+                'loaned' ? (
+                  <ArrowUpRight
+                    size={21}
+                  />
+                ) : (
+                  <BookCheck
+                    size={21}
+                  />
+                )}
+              </div>
+
+              <div>
+
+                <p className="font-semibold">
+                  {editingCopy.status ===
+                  'loaned'
+                    ? 'In prestito'
+                    : 'In biblioteca'}
+                </p>
+
+                <p className="text-[#8e8e93] text-xs mt-0.5">
+                  Gestisci questa copia fisica
+                </p>
+
+              </div>
+
+            </div>
+
+            <div className="mt-4 rounded-[22px] bg-black/[0.025] dark:bg-white/[0.05] border border-black/[0.025] dark:border-white/[0.06] p-3">
+
+              <LocationPicker
+                locations={
+                  locations
+                }
+                value={
+                  editingLocation
+                }
+                onChange={
+                  setEditingLocation
+                }
+              />
+
+              <button
+                type="button"
+                disabled={
+                  saving
+                }
+                onClick={
+                  saveLocation
+                }
+                className="w-full bg-black text-white dark:bg-white dark:text-black rounded-[18px] py-3.5 font-semibold mt-3 exl-press disabled:opacity-50"
+              >
+                {saving
+                  ? 'Salvataggio…'
+                  : 'Salva posizione'}
+              </button>
+
+            </div>
+
+            {error && (
+              <p className="text-[#ff3b30] text-sm mt-4 px-1">
+                {error}
+              </p>
+            )}
+
+            <div className="h-px bg-black/5 dark:bg-white/10 mt-5" />
+
+            <button
+              type="button"
+              onClick={() => {
+                const copy =
+                  editingCopy
+
+                closeEditor()
+
+                window.setTimeout(
+                  () =>
+                    requestDelete(
+                      copy
+                    ),
+                  180
+                )
+              }}
+              className="w-full min-h-[48px] mt-3 rounded-[17px] text-[#ff3b30] font-semibold flex items-center justify-center gap-2 exl-press"
+            >
+              <Trash2
+                size={17}
+              />
+
+              Elimina questa copia
+            </button>
+
+          </div>
+        )}
+
+      </AdaptiveGlassModal>
 
       <ExLibrisConfirmDialog
         open={
@@ -506,7 +704,11 @@ export default function BookCopiesPanel({
           )
         }
         title="Eliminare questa copia?"
-        message="Verrà eliminata soltanto questa copia fisica. Le altre copie della stessa edizione resteranno nella biblioteca."
+        message={
+          copyToDelete
+            ? `La copia ${copyToDelete.copy_number ?? ''} verrà eliminata. Le altre copie della stessa edizione resteranno nella biblioteca.`
+            : ''
+        }
         confirmLabel="Elimina copia"
         destructive
         onCancel={() =>
@@ -518,6 +720,35 @@ export default function BookCopiesPanel({
           deleteCopy
         }
       />
+
+      <ExLibrisConfirmDialog
+        open={
+          Boolean(
+            blockedCopy
+          )
+        }
+        title="Copia in prestito"
+        message="Questa copia risulta attualmente in prestito. Registrane prima la restituzione dalla sezione Prestiti, poi potrai eliminarla."
+        confirmLabel="Vai ai prestiti"
+        cancelLabel="Chiudi"
+        onCancel={() =>
+          setBlockedCopy(
+            null
+          )
+        }
+        onConfirm={() => {
+          setBlockedCopy(
+            null
+          )
+
+          haptic('light')
+
+          router.push(
+            '/loans'
+          )
+        }}
+      />
+
     </>
   )
 }

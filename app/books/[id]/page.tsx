@@ -45,6 +45,7 @@ import BookCitations from '@/components/BookCitations'
 import BookBookmarkCard from '@/components/BookBookmarkCard'
 import ReadingPresence from '@/components/ReadingPresence'
 import BookCopiesPanel from '@/components/BookCopiesPanel'
+import ExLibrisConfirmDialog from '@/components/ExLibrisConfirmDialog'
 
 import {
   buildLocationPath,
@@ -125,6 +126,12 @@ export default function BookPage() {
     useState(true)
 
   const [saving, setSaving] =
+    useState(false)
+
+  const [
+    deleteBookOpen,
+    setDeleteBookOpen,
+  ] =
     useState(false)
 
   const [error, setError] =
@@ -891,12 +898,7 @@ export default function BookPage() {
   async function deleteBook() {
     if (!book) return
 
-    const confirmed =
-      window.confirm(
-        `Eliminare "${book.title}" dalla biblioteca?`
-      )
-
-    if (!confirmed) return
+    setDeleteBookOpen(false)
 
     const { error } =
       await supabase
@@ -1474,8 +1476,11 @@ export default function BookPage() {
             </button>
 
             <button
-              onClick={deleteBook}
-              className="w-full text-red-500 py-4 mt-3 flex items-center justify-center gap-2"
+              onClick={() => {
+                haptic('light')
+                setDeleteBookOpen(true)
+              }}
+              className="w-full text-red-500 py-4 mt-3 flex items-center justify-center gap-2 exl-press"
             >
               <Trash2
                 size={18}
@@ -1488,6 +1493,22 @@ export default function BookPage() {
         )}
 
       </div>
+
+      <ExLibrisConfirmDialog
+        open={deleteBookOpen}
+        title="Eliminare il libro?"
+        message={
+          book
+            ? `“${book.title}” verrà eliminato dalla biblioteca. Questa operazione non può essere annullata.`
+            : 'Il libro verrà eliminato dalla biblioteca.'
+        }
+        confirmLabel="Elimina"
+        destructive
+        onCancel={() =>
+          setDeleteBookOpen(false)
+        }
+        onConfirm={deleteBook}
+      />
 
     </main>
   )

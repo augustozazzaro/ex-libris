@@ -20,7 +20,6 @@ import {
   Plus,
   Quote,
   Trash2,
-  X,
 } from 'lucide-react'
 
 import {
@@ -35,6 +34,7 @@ import {
 } from '@/utils/exlibris-cache'
 
 import ExLibrisConfirmDialog from '@/components/ExLibrisConfirmDialog'
+import AdaptiveGlassModal from '@/components/glass/AdaptiveGlassModal'
 
 type Citation = {
   id: string
@@ -182,32 +182,6 @@ export default function BookCitations({
   }, [
     loadCitations,
   ])
-
-  useEffect(() => {
-    if (!editorOpen) return
-
-    function handleKeyDown(
-      event: KeyboardEvent
-    ) {
-      if (
-        event.key ===
-        'Escape'
-      ) {
-        closeEditor()
-      }
-    }
-
-    window.addEventListener(
-      'keydown',
-      handleKeyDown
-    )
-
-    return () =>
-      window.removeEventListener(
-        'keydown',
-        handleKeyDown
-      )
-  }, [editorOpen])
 
   function resetEditor() {
     setEditingId(null)
@@ -732,219 +706,134 @@ export default function BookCitations({
 
       </section>
 
-      <AnimatePresence>
-        {editorOpen && (
-          <motion.div
-            initial={{
-              opacity: 0,
-            }}
-            animate={{
-              opacity: 1,
-            }}
-            exit={{
-              opacity: 0,
-            }}
-            className="fixed inset-0 z-[190] bg-black/25 backdrop-blur-[8px] flex items-end md:items-center justify-center px-3 pb-[max(12px,env(safe-area-inset-bottom))] md:p-6"
-            onClick={
-              closeEditor
-            }
-          >
-            <motion.div
+      <AdaptiveGlassModal
+        open={editorOpen}
+        onClose={closeEditor}
+        eyebrow="Ex Libris"
+        title={
+          editingId
+            ? 'Modifica citazione'
+            : 'Nuova citazione'
+        }
+        maxWidth="560px"
+      >
+
+        <div className="px-5 pb-5">
+
+          <div className="pt-2">
+
+            <label className="text-[#8e8e93] text-xs ml-2">
+              Citazione
+            </label>
+
+            <div className="relative mt-1">
+
+              <Quote
+                size={20}
+                className="absolute left-4 top-4 text-[#5E7FA3]/50"
+              />
+
+              <textarea
+                autoFocus
+                value={quoteText}
+                onChange={(
+                  event
+                ) =>
+                  setQuoteText(
+                    event.target.value
+                  )
+                }
+                rows={7}
+                placeholder="Scrivi o incolla qui la frase…"
+                className="w-full bg-black/[0.035] dark:bg-white/[0.07] rounded-[22px] pl-12 pr-4 py-4 outline-none resize-none leading-relaxed border border-black/[0.025] dark:border-white/[0.06] focus:bg-black/[0.05] dark:focus:bg-white/[0.09] transition-colors"
+              />
+
+            </div>
+
+          </div>
+
+          <div className="mt-4">
+
+            <label className="text-[#8e8e93] text-xs ml-2">
+              Pagina
+            </label>
+
+            <input
+              inputMode="numeric"
+              value={page}
+              onChange={(
+                event
+              ) =>
+                setPage(
+                  event.target.value.replace(
+                    /\D/g,
+                    ''
+                  )
+                )
+              }
+              placeholder={
+                pages
+                  ? `1–${pages}`
+                  : 'Facoltativa'
+              }
+              className="w-full bg-black/[0.035] dark:bg-white/[0.07] rounded-[18px] px-4 py-3.5 mt-1 outline-none border border-black/[0.025] dark:border-white/[0.06] focus:bg-black/[0.05] dark:focus:bg-white/[0.09] transition-colors"
+            />
+
+          </div>
+
+          <div className="mt-4">
+
+            <label className="text-[#8e8e93] text-xs ml-2">
+              Nota personale
+            </label>
+
+            <textarea
+              value={note}
+              onChange={(
+                event
+              ) =>
+                setNote(
+                  event.target.value
+                )
+              }
+              rows={3}
+              placeholder="Perché vuoi ricordarla?"
+              className="w-full bg-black/[0.035] dark:bg-white/[0.07] rounded-[18px] px-4 py-3.5 mt-1 outline-none resize-none leading-relaxed border border-black/[0.025] dark:border-white/[0.06] focus:bg-black/[0.05] dark:focus:bg-white/[0.09] transition-colors"
+            />
+
+          </div>
+
+          {error && (
+            <motion.p
               initial={{
                 opacity: 0,
-                y: 30,
-                scale: 0.97,
+                y: -3,
               }}
               animate={{
                 opacity: 1,
                 y: 0,
-                scale: 1,
               }}
-              exit={{
-                opacity: 0,
-                y: 20,
-                scale: 0.98,
-              }}
-              transition={{
-                type:
-                  'spring',
-                stiffness:
-                  330,
-                damping:
-                  30,
-              }}
-              onClick={(
-                event
-              ) =>
-                event
-                  .stopPropagation()
-              }
-              className="w-full max-w-[560px] max-h-[88dvh] overflow-y-auto bg-white/95 dark:bg-[#2c2c2e]/96 backdrop-blur-[32px] rounded-[30px] border border-white/70 dark:border-white/10 shadow-[0_28px_90px_rgba(0,0,0,0.28)]"
+              className="text-[#ff3b30] text-sm mt-4 px-1"
             >
-              <div className="p-5">
+              {error}
+            </motion.p>
+          )}
 
-                <div className="flex items-start justify-between gap-4">
+          <button
+            disabled={saving}
+            onClick={saveCitation}
+            className="w-full bg-black text-white dark:bg-white dark:text-black rounded-[19px] py-4 font-semibold mt-6 exl-press disabled:opacity-50"
+          >
+            {saving
+              ? 'Salvataggio…'
+              : editingId
+                ? 'Salva modifiche'
+                : 'Salva citazione'}
+          </button>
 
-                  <div>
+        </div>
 
-                    <p className="text-[#8e8e93] text-[11px] uppercase tracking-[0.08em]">
-                      Ex Libris
-                    </p>
-
-                    <h2 className="text-[24px] font-bold tracking-[-0.035em] mt-1">
-                      {editingId
-                        ? 'Modifica citazione'
-                        : 'Nuova citazione'}
-                    </h2>
-
-                  </div>
-
-                  <button
-                    onClick={
-                      closeEditor
-                    }
-                    className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center exl-press"
-                  >
-                    <X
-                      size={17}
-                    />
-                  </button>
-
-                </div>
-
-                <div className="mt-6">
-
-                  <label className="text-[#8e8e93] text-xs ml-2">
-                    Citazione
-                  </label>
-
-                  <div className="relative mt-1">
-
-                    <Quote
-                      size={20}
-                      className="absolute left-4 top-4 text-[#5E7FA3]/50"
-                    />
-
-                    <textarea
-                      autoFocus
-                      value={
-                        quoteText
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        setQuoteText(
-                          event
-                            .target
-                            .value
-                        )
-                      }
-                      rows={7}
-                      placeholder="Scrivi o incolla qui la frase…"
-                      className="w-full bg-black/[0.035] dark:bg-white/[0.07] rounded-[22px] pl-12 pr-4 py-4 outline-none resize-none leading-relaxed"
-                    />
-
-                  </div>
-
-                </div>
-
-                <div className="mt-4">
-
-                  <label className="text-[#8e8e93] text-xs ml-2">
-                    Pagina
-                  </label>
-
-                  <input
-                    inputMode="numeric"
-                    value={
-                      page
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      setPage(
-                        event
-                          .target
-                          .value
-                          .replace(
-                            /\D/g,
-                            ''
-                          )
-                      )
-                    }
-                    placeholder={
-                      pages
-                        ? `1–${pages}`
-                        : 'Facoltativa'
-                    }
-                    className="w-full bg-black/[0.035] dark:bg-white/[0.07] rounded-[18px] px-4 py-3.5 mt-1 outline-none"
-                  />
-
-                </div>
-
-                <div className="mt-4">
-
-                  <label className="text-[#8e8e93] text-xs ml-2">
-                    Nota personale
-                  </label>
-
-                  <textarea
-                    value={
-                      note
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      setNote(
-                        event
-                          .target
-                          .value
-                      )
-                    }
-                    rows={3}
-                    placeholder="Perché vuoi ricordarla?"
-                    className="w-full bg-black/[0.035] dark:bg-white/[0.07] rounded-[18px] px-4 py-3.5 mt-1 outline-none resize-none leading-relaxed"
-                  />
-
-                </div>
-
-                {error && (
-                  <motion.p
-                    initial={{
-                      opacity: 0,
-                      y: -3,
-                    }}
-                    animate={{
-                      opacity: 1,
-                      y: 0,
-                    }}
-                    className="text-[#ff3b30] text-sm mt-4 px-1"
-                  >
-                    {error}
-                  </motion.p>
-                )}
-
-                <button
-                  disabled={
-                    saving
-                  }
-                  onClick={
-                    saveCitation
-                  }
-                  className="w-full bg-black text-white dark:bg-white dark:text-black rounded-[19px] py-4 font-semibold mt-6 exl-press disabled:opacity-50"
-                >
-                  {saving
-                    ? 'Salvataggio…'
-                    : editingId
-                      ? 'Salva modifiche'
-                      : 'Salva citazione'}
-                </button>
-
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </AdaptiveGlassModal>
 
       <ExLibrisConfirmDialog
         open={

@@ -1,13 +1,20 @@
 'use client'
 
 import {
-  useEffect,
-} from 'react'
+  AlertTriangle,
+  Check,
+  Trash2,
+} from 'lucide-react'
 
 import {
-  AnimatePresence,
   motion,
 } from 'framer-motion'
+
+import AdaptiveGlassModal from '@/components/glass/AdaptiveGlassModal'
+
+import {
+  haptic,
+} from '@/utils/haptics'
 
 type Props = {
   open: boolean
@@ -30,101 +37,107 @@ export default function ExLibrisConfirmDialog({
   onConfirm,
   onCancel,
 }: Props) {
-  useEffect(() => {
-    if (!open) return
+  function cancel() {
+    haptic('light')
+    onCancel()
+  }
 
-    function handleKeyDown(
-      event: KeyboardEvent
-    ) {
-      if (event.key === 'Escape') {
-        onCancel()
-      }
-    }
-
-    window.addEventListener(
-      'keydown',
-      handleKeyDown
+  function confirm() {
+    haptic(
+      destructive
+        ? 'medium'
+        : 'success'
     )
 
-    return () =>
-      window.removeEventListener(
-        'keydown',
-        handleKeyDown
-      )
-  }, [open, onCancel])
+    onConfirm()
+  }
 
   return (
-    <AnimatePresence>
-      {open && (
+    <AdaptiveGlassModal
+      open={open}
+      onClose={cancel}
+      eyebrow={
+        destructive
+          ? 'Attenzione'
+          : 'Ex Libris'
+      }
+      title={title}
+      maxWidth="420px"
+    >
+      <div className="px-5 pb-5">
+
         <motion.div
           initial={{
             opacity: 0,
+            y: 6,
           }}
           animate={{
             opacity: 1,
+            y: 0,
           }}
-          exit={{
-            opacity: 0,
-          }}
-          className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/25 backdrop-blur-[8px] px-3 pb-[max(12px,env(safe-area-inset-bottom))] md:p-6"
-          onClick={onCancel}
+          className="pt-1"
         >
-          <motion.div
-            initial={{
-              y: 24,
-              scale: 0.97,
-              opacity: 0,
-            }}
-            animate={{
-              y: 0,
-              scale: 1,
-              opacity: 1,
-            }}
-            exit={{
-              y: 20,
-              scale: 0.98,
-              opacity: 0,
-            }}
-            transition={{
-              type: 'spring',
-              stiffness: 360,
-              damping: 30,
-            }}
-            onClick={(event) =>
-              event.stopPropagation()
-            }
-            className="w-full max-w-[420px] bg-white/92 dark:bg-[#2c2c2e]/94 backdrop-blur-[32px] rounded-[30px] border border-white/70 dark:border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.24)] p-5"
+
+          <div
+            className={`w-12 h-12 rounded-[16px] flex items-center justify-center ${
+              destructive
+                ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                : 'bg-[#5E7FA3]/12 text-[#5E7FA3]'
+            }`}
           >
-            <h2 className="text-[22px] font-bold tracking-[-0.03em]">
-              {title}
-            </h2>
+            {destructive ? (
+              <AlertTriangle
+                size={22}
+                strokeWidth={1.9}
+              />
+            ) : (
+              <Check
+                size={21}
+                strokeWidth={2}
+              />
+            )}
+          </div>
 
-            <p className="text-[#6e6e73] dark:text-[#aeaeb2] leading-relaxed mt-2">
-              {message}
-            </p>
+          <p className="text-[#6e6e73] dark:text-[#aeaeb2] text-[15px] leading-relaxed mt-4">
+            {message}
+          </p>
 
-            <div className="grid grid-cols-2 gap-2 mt-6">
-              <button
-                onClick={onCancel}
-                className="rounded-[18px] py-3.5 bg-black/5 dark:bg-white/10 font-semibold exl-press"
-              >
-                {cancelLabel}
-              </button>
-
-              <button
-                onClick={onConfirm}
-                className={`rounded-[18px] py-3.5 font-semibold text-white exl-press ${
-                  destructive
-                    ? 'bg-[#ff3b30]'
-                    : 'bg-black dark:bg-white dark:text-black'
-                }`}
-              >
-                {confirmLabel}
-              </button>
-            </div>
-          </motion.div>
         </motion.div>
-      )}
-    </AnimatePresence>
+
+        <div className="grid grid-cols-2 gap-2 mt-6">
+
+          <button
+            type="button"
+            onClick={cancel}
+            className="min-h-[50px] rounded-[18px] bg-black/[0.045] dark:bg-white/[0.09] font-semibold exl-press"
+          >
+            {cancelLabel}
+          </button>
+
+          <motion.button
+            type="button"
+            whileTap={{
+              scale: 0.975,
+            }}
+            onClick={confirm}
+            className={`min-h-[50px] rounded-[18px] font-semibold flex items-center justify-center gap-2 shadow-[0_7px_20px_rgba(0,0,0,0.10)] ${
+              destructive
+                ? 'bg-[#ff3b30] text-white'
+                : 'bg-black text-white dark:bg-white dark:text-black'
+            }`}
+          >
+            {destructive && (
+              <Trash2
+                size={17}
+              />
+            )}
+
+            {confirmLabel}
+          </motion.button>
+
+        </div>
+
+      </div>
+    </AdaptiveGlassModal>
   )
 }

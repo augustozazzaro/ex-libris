@@ -1812,9 +1812,592 @@ function bestCategories(
   ].slice(0, 20)
 }
 
+
+type TextSearchItem = {
+  source:
+    | 'google_books'
+    | 'open_library'
+
+  sourceId?: string
+
+  isbn10: string | null
+  isbn13: string | null
+
+  title: string
+  subtitle: string
+
+  authors: string[]
+
+  publisher: string
+  publicationDate: string
+  edition: string
+
+  pages: number | null
+  language: string
+
+  series: string
+  translators: string[]
+  editors: string[]
+  illustrators: string[]
+  introductions: string[]
+  format: string
+  bibliographic_notes: string
+
+  cover: string | null
+  categories: string[]
+  description: string
+}
+
+function textSearchKey(
+  item: TextSearchItem
+) {
+  if (item.isbn13) {
+    return `isbn13:${item.isbn13}`
+  }
+
+  if (item.isbn10) {
+    return `isbn10:${item.isbn10}`
+  }
+
+  const normalize = (
+    value: string
+  ) =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(
+        /[\u0300-\u036f]/g,
+        ''
+      )
+      .replace(
+        /[^a-z0-9]+/g,
+        ' '
+      )
+      .trim()
+
+  return [
+    normalize(item.title),
+    normalize(
+      item.authors.join(' ')
+    ),
+    normalize(item.publisher),
+    item.publicationDate
+      .slice(0, 4),
+  ].join('|')
+}
+
+async function textSearch(
+  query: string
+): Promise<TextSearchItem[]> {
+  const q =
+    query.trim()
+
+  if (!q) {
+    return []
+  }
+
+  const [
+    google,
+    openLibrary,
+  ] = await Promise.all([
+    safeFetch(
+      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+        q
+      )}&maxResults=30&projection=full`
+    ),
+
+    safeFetch(
+      `https://openlibrary.org/search.json?q=${encodeURIComponent(
+        q
+      )}&limit=30`
+    ),
+  ])
+
+  const results:
+    TextSearchItem[] = []
+
+  for (
+    const item of
+    google?.items ?? []
+  ) {
+    const info =
+      item?.volumeInfo ?? {}
+
+    const identifiers =
+      Array.isArray(
+        info.industryIdentifiers
+      )
+        ? info.industryIdentifiers
+        : []
+
+    const raw10 =
+      identifiers.find(
+        (
+          entry: {
+            type?: string
+            identifier?: string
+          }
+        ) =>
+          entry.type ===
+          'ISBN_10'
+      )?.identifier
+
+    const raw13 =
+      identifiers.find(
+        (
+          entry: {
+            type?: string
+            identifier?: string
+          }
+        ) =>
+          entry.type ===
+          'ISBN_13'
+      )?.identifier
+
+    const isbn10 =
+      raw10
+        ? cleanISBN(raw10)
+        : null
+
+    const isbn13 =
+      raw13
+        ? cleanISBN(raw13)
+        : isbn10
+          ? isbn10To13(isbn10)
+          : null
+
+    const title =
+      cleanSbnText(
+        info.title
+      )
+
+    if (!title) continue
+
+    const authors =
+      Array.isArray(
+        info.authors
+      )
+        ? info.authors
+            .map(
+              (
+                value: unknown
+              ) =>
+                cleanSbnText(
+                  value
+                )
+            )
+            .filter(Boolean)
+        : []
+
+    const cover =
+      secureImage(
+        info.imageLinks
+          ?.extraLarge ||
+        info.imageLinks
+          ?.large ||
+        info.imageLinks
+          ?.medium ||
+        info.imageLinks
+          ?.thumbnail ||
+        info.imageLinks
+          ?.smallThumbnail
+      ) ?? null
+
+    results.push({
+      source:
+        'google_books',
+
+      sourceId:
+        typeof item?.id ===
+        'string'
+          ? item.id
+          : undefined,
+
+      isbn10,
+      isbn13,
+
+      title,
+
+      subtitle:
+        cleanSbnText(
+          info.subtitle
+        ),
+
+      authors,
+
+      publisher:
+        cleanSbnText(
+          info.publisher
+        ),
+
+      publicationDate:
+        cleanSbnText(
+          info.publishedDate
+        ),
+
+      edition: '',
+
+      pages:
+        Number.isFinite(
+          info.pageCount
+        )
+          ? info.pageCount
+          : null,
+
+      language:
+        cleanSbnText(
+          info.language
+        ),
+
+      series: '',
+
+      translators: [],
+      editors: [],
+      illustrators: [],
+      introductions: [],
+
+      format:
+        info.printType ===
+        'BOOK'
+          ? 'Libro'
+          : '',
+
+      bibliographic_notes:
+        '',
+
+      cover,
+
+      categories:
+        Array.isArray(
+          info.categories
+        )
+          ? info.categories
+              .map(
+                (
+                  value: unknown
+                ) =>
+                  cleanSbnText(
+                    value
+                  )
+              )
+              .filter(Boolean)
+          : [],
+
+      description:
+        stripHtml(
+          info.description
+        ) ?? '',
+    })
+  }
+
+  for (
+    const doc of
+    openLibrary?.docs ?? []
+  ) {
+    const rawIsbns =
+      Array.isArray(
+        doc.isbn
+      )
+        ? doc.isbn
+            .map(
+              (
+                value: unknown
+              ) =>
+                cleanISBN(
+                  String(
+                    value ?? ''
+                  )
+                )
+            )
+            .filter(Boolean)
+        : []
+
+    const isbn13 =
+      rawIsbns.find(
+        (
+          value: string
+        ) =>
+          value.length === 13
+      ) ?? null
+
+    const isbn10 =
+      rawIsbns.find(
+        (
+          value: string
+        ) =>
+          value.length === 10
+      ) ??
+      (
+        isbn13
+          ? isbn13To10(
+              isbn13
+            )
+          : null
+      )
+
+    const title =
+      cleanSbnText(
+        doc.title
+      )
+
+    if (!title) continue
+
+    const authors =
+      Array.isArray(
+        doc.author_name
+      )
+        ? doc.author_name
+            .map(
+              (
+                value: unknown
+              ) =>
+                cleanSbnText(
+                  value
+                )
+            )
+            .filter(Boolean)
+        : []
+
+    const publishers =
+      Array.isArray(
+        doc.publisher
+      )
+        ? doc.publisher
+            .map(
+              (
+                value: unknown
+              ) =>
+                cleanSbnText(
+                  value
+                )
+            )
+            .filter(Boolean)
+        : []
+
+    const cover =
+      typeof doc.cover_i ===
+      'number'
+        ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+        : isbn13
+          ? `https://covers.openlibrary.org/b/isbn/${isbn13}-L.jpg?default=false`
+          : null
+
+    const year =
+      Number.isFinite(
+        doc.first_publish_year
+      )
+        ? String(
+            doc.first_publish_year
+          )
+        : ''
+
+    results.push({
+      source:
+        'open_library',
+
+      sourceId:
+        typeof doc.key ===
+        'string'
+          ? doc.key
+          : undefined,
+
+      isbn10,
+      isbn13,
+
+      title,
+
+      subtitle:
+        cleanSbnText(
+          doc.subtitle
+        ),
+
+      authors,
+
+      publisher:
+        publishers[0] ??
+        '',
+
+      publicationDate:
+        year,
+
+      edition: '',
+
+      pages:
+        Number.isFinite(
+          doc.number_of_pages_median
+        )
+          ? doc.number_of_pages_median
+          : null,
+
+      language:
+        Array.isArray(
+          doc.language
+        )
+          ? cleanSbnText(
+              doc.language[0]
+            )
+          : '',
+
+      series: '',
+
+      translators: [],
+      editors: [],
+      illustrators: [],
+      introductions: [],
+
+      format: '',
+
+      bibliographic_notes:
+        '',
+
+      cover,
+
+      categories:
+        Array.isArray(
+          doc.subject
+        )
+          ? doc.subject
+              .slice(
+                0,
+                12
+              )
+              .map(
+                (
+                  value: unknown
+                ) =>
+                  cleanSbnText(
+                    value
+                  )
+              )
+              .filter(Boolean)
+          : [],
+
+      description: '',
+    })
+  }
+
+  const unique =
+    new Map<
+      string,
+      TextSearchItem
+    >()
+
+  for (
+    const item of results
+  ) {
+    const key =
+      textSearchKey(item)
+
+    const existing =
+      unique.get(key)
+
+    if (!existing) {
+      unique.set(
+        key,
+        item
+      )
+      continue
+    }
+
+    /*
+      Se due fonti descrivono
+      la stessa edizione,
+      preferiamo quella con
+      più informazioni.
+    */
+    const score = (
+      value: TextSearchItem
+    ) =>
+      [
+        value.cover,
+        value.publisher,
+        value.publicationDate,
+        value.description,
+        value.pages,
+        value.isbn13,
+      ].filter(Boolean)
+        .length
+
+    if (
+      score(item) >
+      score(existing)
+    ) {
+      unique.set(
+        key,
+        item
+      )
+    }
+  }
+
+  return [
+    ...unique.values()
+  ]
+    .sort(
+      (a, b) => {
+        const aHasIsbn =
+          Boolean(
+            a.isbn13 ||
+            a.isbn10
+          )
+
+        const bHasIsbn =
+          Boolean(
+            b.isbn13 ||
+            b.isbn10
+          )
+
+        if (
+          aHasIsbn !==
+          bHasIsbn
+        ) {
+          return aHasIsbn
+            ? -1
+            : 1
+        }
+
+        return 0
+      }
+    )
+    .slice(
+      0,
+      30
+    )
+}
+
 export async function GET(
   request: NextRequest
 ) {
+  const rawQuery =
+    request.nextUrl.searchParams
+      .get('q')
+      ?.trim()
+
+  if (rawQuery) {
+    const items =
+      await textSearch(
+        rawQuery
+      )
+
+    return NextResponse.json({
+      found:
+        items.length > 0,
+
+      exact:
+        false,
+
+      mode:
+        'text',
+
+      query:
+        rawQuery,
+
+      items,
+
+      matches:
+        items.length,
+    })
+  }
+
   const rawISBN =
     request.nextUrl.searchParams.get(
       'isbn'

@@ -113,7 +113,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 md:hidden pointer-events-none"
+      className="fixed left-0 right-0 bottom-0 z-[500] md:hidden pointer-events-none exl-fixed-nav"
     >
 
       <div

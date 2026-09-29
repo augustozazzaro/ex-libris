@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  useEffect,
   useMemo,
   useState,
 } from 'react'
@@ -14,6 +15,12 @@ type Props = {
   authors?: string[] | string | null
   coverUrl?: string | null
   className?: string
+
+  /*
+   * Usalo SOLO per poche copertine
+   * immediatamente visibili.
+   */
+  priority?: boolean
 }
 
 const palettes = [
@@ -79,9 +86,22 @@ export default function BookCover({
   authors,
   coverUrl,
   className = '',
+  priority = false,
 }: Props) {
   const [imageFailed, setImageFailed] =
     useState(false)
+
+  const [imageLoaded, setImageLoaded] =
+    useState(false)
+
+  /*
+   * Importantissimo quando lo stesso
+   * componente riceve una nuova URL.
+   */
+  useEffect(() => {
+    setImageFailed(false)
+    setImageLoaded(false)
+  }, [coverUrl])
 
   const palette =
     useMemo(() => {
@@ -97,32 +117,27 @@ export default function BookCover({
         hashString(seed) %
         palettes.length
       ]
-    }, [title, authors])
-
-  if (
-    coverUrl &&
-    !imageFailed
-  ) {
-    return (
-      <img
-        src={coverUrl}
-        alt={title}
-        onError={() =>
-          setImageFailed(true)
-        }
-        className={`w-full h-full object-cover exl-cover-in ${className}`}
-      />
-    )
-  }
+    }, [
+      title,
+      authors,
+    ])
 
   const author =
     Array.isArray(authors)
-      ? authors[0] ?? 'Autore non disponibile'
-      : authors || 'Autore non disponibile'
+      ? authors[0] ??
+        'Autore non disponibile'
+      : authors ||
+        'Autore non disponibile'
 
-  return (
+  /*
+   * Placeholder deterministico:
+   * rimane sotto l'immagine vera.
+   * In questo modo non abbiamo flash
+   * grigi mentre la cover arriva.
+   */
+  const fallback = (
     <div
-      className={`relative w-full h-full overflow-hidden p-4 flex flex-col justify-between ${className}`}
+      className="absolute inset-0 overflow-hidden p-4 flex flex-col justify-between"
       style={{
         backgroundColor:
           palette.background,
@@ -130,7 +145,6 @@ export default function BookCover({
           palette.foreground,
       }}
     >
-
       <div
         className="absolute top-0 right-0 w-20 h-20 rounded-bl-[40px] opacity-40"
         style={{
@@ -164,7 +178,58 @@ export default function BookCover({
         </p>
 
       </div>
+    </div>
+  )
 
+  return (
+    <div
+      className={`relative w-full h-full overflow-hidden ${className}`}
+    >
+      {fallback}
+
+      {coverUrl &&
+        !imageFailed && (
+        <img
+          src={coverUrl}
+          alt={title}
+
+          loading={
+            priority
+              ? 'eager'
+              : 'lazy'
+          }
+
+          fetchPriority={
+            priority
+              ? 'high'
+              : 'auto'
+          }
+
+          decoding="async"
+
+          onLoad={() =>
+            setImageLoaded(
+              true
+            )
+          }
+
+          onError={() => {
+            setImageFailed(
+              true
+            )
+
+            setImageLoaded(
+              false
+            )
+          }}
+
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
+            imageLoaded
+              ? 'opacity-100'
+              : 'opacity-0'
+          }`}
+        />
+      )}
     </div>
   )
 }

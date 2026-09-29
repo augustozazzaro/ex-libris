@@ -397,3 +397,58 @@ select:focus {
     filter: blur(0);
   }
 }
+
+/* =========================================================
+   EX LIBRIS — viewport / mobile navigation stability
+   ========================================================= */
+
+html {
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+  min-height: 100dvh;
+}
+
+/*
+ * La toolbar mobile deve restare legata al visual viewport.
+ * Separiamo inoltre il layer compositing per evitare che
+ * repaint e backdrop-filter della pagina la trascinino.
+ */
+.exl-fixed-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+
+  will-change: transform;
+
+  contain: layout paint style;
+
+  touch-action: pan-x pan-y;
+}
+
+/*
+ * Evita che elementi glass molto grandi provochino repaint
+ * inutili del layer della navigation durante lo scroll.
+ */
+.exl-page {
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+/*
+ * Scroll momentum nativo su iOS.
+ */
+.exl-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}

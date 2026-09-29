@@ -224,10 +224,13 @@ export default function Home() {
     const routes = [
       '/catalog',
       '/favorites',
+      '/my-books',
       '/loans',
       '/shuffle',
       '/profile',
       '/citations',
+      '/family',
+      '/locations',
       '/settings',
       '/add',
     ]
@@ -604,6 +607,9 @@ export default function Home() {
                       title={book.title}
                       authors={book.authors}
                       coverUrl={cover}
+                      priority={
+                        index < 3
+                      }
                     />
 
                   </div>

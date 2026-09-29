@@ -16,6 +16,10 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  readCache,
+  writeCache,
+} from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
 type Book = {
@@ -24,6 +28,10 @@ type Book = {
   authors: string[] | null
   cover_url: string | null
   custom_cover_url: string | null
+}
+
+type FavoritesSnapshot = {
+  books: Book[]
 }
 
 export default function FavoritesPage() {
@@ -38,20 +46,53 @@ export default function FavoritesPage() {
   useEffect(() => {
     async function load() {
       const {
-        data: { user },
-      } = await supabase.auth.getUser()
+        data: { session },
+      } =
+        await supabase.auth
+          .getSession()
+
+      const user =
+        session?.user
 
       if (!user) {
         setLoading(false)
         return
       }
 
-      const { data: states } =
+      const cacheKey =
+        `favorites:${user.id}`
+
+      const cached =
+        readCache<FavoritesSnapshot>(
+          cacheKey
+        )
+
+      if (cached) {
+        setBooks(
+          cached.books
+        )
+
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
+
+      const {
+        data: states,
+      } =
         await supabase
-          .from('user_book_state')
+          .from(
+            'user_book_state'
+          )
           .select('book_id')
-          .eq('user_id', user.id)
-          .eq('favorite', true)
+          .eq(
+            'user_id',
+            user.id
+          )
+          .eq(
+            'favorite',
+            true
+          )
 
       const ids =
         (states ?? [])
@@ -65,7 +106,17 @@ export default function FavoritesPage() {
           )
 
       if (!ids.length) {
+        const snapshot:
+          FavoritesSnapshot = {
+            books: [],
+          }
+
         setBooks([])
+        writeCache(
+          cacheKey,
+          snapshot
+        )
+
         setLoading(false)
         return
       }
@@ -80,10 +131,24 @@ export default function FavoritesPage() {
             cover_url,
             custom_cover_url
           `)
-          .in('id', ids)
+          .in(
+            'id',
+            ids
+          )
+
+      const snapshot:
+        FavoritesSnapshot = {
+          books:
+            (data ?? []) as Book[],
+        }
 
       setBooks(
-        (data ?? []) as Book[]
+        snapshot.books
+      )
+
+      writeCache(
+        cacheKey,
+        snapshot
       )
 
       setLoading(false)
@@ -163,7 +228,7 @@ export default function FavoritesPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-5 gap-y-8 mt-7">
 
             {books.map(
-              (book) => {
+              (book, index) => {
                 const cover =
                   book.custom_cover_url ||
                   book.cover_url
@@ -181,6 +246,9 @@ export default function FavoritesPage() {
                         title={book.title}
                         authors={book.authors}
                         coverUrl={cover}
+                        priority={
+                          index < 6
+                        }
                       />
 
                     </div>

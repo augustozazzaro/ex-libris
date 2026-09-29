@@ -582,7 +582,7 @@ export default function CatalogPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-5 gap-y-8 mt-7">
 
             {visibleBooks.map(
-              (book) => {
+              (book, index) => {
 
                 const cover =
                   book.custom_cover_url ||
@@ -601,6 +601,9 @@ export default function CatalogPage() {
                         title={book.title}
                         authors={book.authors}
                         coverUrl={cover}
+                        priority={
+                          index < 6
+                        }
                       />
 
                     </div>
@@ -650,6 +653,9 @@ export default function CatalogPage() {
                         title={book.title}
                         authors={book.authors}
                         coverUrl={cover}
+                        priority={
+                          index < 5
+                        }
                       />
 
                     </div>

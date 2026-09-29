@@ -42,6 +42,7 @@ import {
   readCache,
   writeCache,
   removeCaches,
+  clearExLibrisCache,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 import ExLibrisConfirmDialog from '@/components/ExLibrisConfirmDialog'
@@ -488,6 +489,20 @@ export default function ProfilePage() {
     setEditing(true)
 
     haptic('light')
+
+    window.setTimeout(
+      () => {
+        document
+          .getElementById(
+            'profile-editor'
+          )
+          ?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          })
+      },
+      120
+    )
   }
 
   function cancelProfileEditor() {
@@ -880,6 +895,9 @@ export default function ProfilePage() {
 
   async function logout() {
     await supabase.auth.signOut()
+
+    clearExLibrisCache()
+
     window.location.href = '/'
   }
 
@@ -961,36 +979,19 @@ export default function ProfilePage() {
             </p>
           )}
 
-          {editing && !uploading && (
-            <div className="flex items-center justify-center gap-2 mt-3">
-
-              <label className="px-3.5 py-2 rounded-full bg-black/[0.05] dark:bg-white/[0.09] text-[12px] font-semibold cursor-pointer exl-press">
-                {avatarUrl
-                  ? 'Cambia foto'
-                  : 'Aggiungi foto'}
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={uploadAvatar}
-                  className="hidden"
-                />
-              </label>
-
-              {avatarUrl && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    haptic('light')
-                    setRemoveAvatarOpen(true)
-                  }}
-                  className="px-3.5 py-2 rounded-full bg-[#ff3b30]/10 text-[#ff3b30] text-[12px] font-semibold exl-press"
-                >
-                  Rimuovi
-                </button>
-              )}
-
-            </div>
+          {editing &&
+            !uploading &&
+            avatarUrl && (
+            <button
+              type="button"
+              onClick={() => {
+                haptic('light')
+                setRemoveAvatarOpen(true)
+              }}
+              className="px-3.5 py-2 rounded-full bg-[#ff3b30]/10 text-[#ff3b30] text-[12px] font-semibold mt-3 exl-press"
+            >
+              Rimuovi foto
+            </button>
           )}
 
           <h1 className="text-[34px] font-bold tracking-[-0.045em] mt-5">
@@ -1232,6 +1233,7 @@ export default function ProfilePage() {
 
         {editing && (
           <motion.section
+            id="profile-editor"
             initial={{
               opacity: 0,
               y: 10,
@@ -1247,7 +1249,7 @@ export default function ProfilePage() {
               stiffness: 330,
               damping: 30,
             }}
-            className="exl-glass exl-card p-5 md:p-6 mt-6"
+            className="exl-glass exl-card p-5 md:p-6 mt-6 scroll-mt-5"
           >
 
             <div className="flex items-start justify-between gap-4">

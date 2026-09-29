@@ -20,6 +20,10 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  readCache,
+  writeCache,
+} from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
 type Book = {
@@ -36,13 +40,15 @@ type StateRow = {
   reading_status: string
 }
 
+type MyBooksSnapshot = {
+  books: Book[]
+}
+
 export default function MyBooksPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen flex items-center justify-center">
-          <ExLibrisLoader />
-        </main>
+        <main className="exl-page" />
       }
     >
       <MyBooksContent />
@@ -66,49 +72,97 @@ function MyBooksContent() {
   useEffect(() => {
     async function load() {
       const {
-        data: { user },
-      } = await supabase.auth.getUser()
+        data: { session },
+      } =
+        await supabase.auth
+          .getSession()
+
+      const user =
+        session?.user
 
       if (!user) {
         setLoading(false)
         return
       }
 
-      let query = supabase
-        .from('user_book_state')
-        .select(`
-          book_id,
-          favorite,
-          reading_status
-        `)
-        .eq('user_id', user.id)
+      const cacheKey =
+        `my-books:${user.id}:${filter}`
 
-      if (filter === 'favorites') {
-        query = query.eq(
-          'favorite',
-          true
+      const cached =
+        readCache<MyBooksSnapshot>(
+          cacheKey
         )
+
+      if (cached) {
+        setBooks(
+          cached.books
+        )
+
+        setLoading(false)
       } else {
-        query = query.eq(
-          'reading_status',
-          filter
-        )
+        setLoading(true)
       }
 
-      const { data: states } =
+      let query =
+        supabase
+          .from(
+            'user_book_state'
+          )
+          .select(`
+            book_id,
+            favorite,
+            reading_status
+          `)
+          .eq(
+            'user_id',
+            user.id
+          )
+
+      if (
+        filter ===
+        'favorites'
+      ) {
+        query =
+          query.eq(
+            'favorite',
+            true
+          )
+      } else {
+        query =
+          query.eq(
+            'reading_status',
+            filter
+          )
+      }
+
+      const {
+        data: states,
+      } =
         await query
 
       const rows =
-        (states ?? []) as StateRow[]
+        (states ??
+          []) as StateRow[]
 
       const ids =
         rows.map(
-          (row) =>
+          row =>
             row.book_id
         )
 
       if (!ids.length) {
+        const snapshot:
+          MyBooksSnapshot = {
+            books: [],
+          }
+
         setBooks([])
+
+        writeCache(
+          cacheKey,
+          snapshot
+        )
+
         setLoading(false)
         return
       }
@@ -123,10 +177,24 @@ function MyBooksContent() {
             cover_url,
             custom_cover_url
           `)
-          .in('id', ids)
+          .in(
+            'id',
+            ids
+          )
+
+      const snapshot:
+        MyBooksSnapshot = {
+          books:
+            (data ?? []) as Book[],
+        }
 
       setBooks(
-        (data ?? []) as Book[]
+        snapshot.books
+      )
+
+      writeCache(
+        cacheKey,
+        snapshot
       )
 
       setLoading(false)
@@ -244,7 +312,7 @@ function MyBooksContent() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-5 gap-y-8 mt-7">
 
-            {books.map((book) => {
+            {books.map((book, index) => {
               const cover =
                 book.custom_cover_url ||
                 book.cover_url
@@ -262,6 +330,9 @@ function MyBooksContent() {
                       title={book.title}
                       authors={book.authors}
                       coverUrl={cover}
+                      priority={
+                        index < 6
+                      }
                     />
 
                   </div>

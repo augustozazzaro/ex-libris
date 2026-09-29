@@ -20,6 +20,11 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  readCache,
+  writeCache,
+  removeCaches,
+} from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
 type Book = {
@@ -40,6 +45,12 @@ type Loan = {
   return_date: string | null
   notes: string | null
   books: Book | null
+}
+
+type LoansSnapshot = {
+  familyId: string
+  books: Book[]
+  loans: Loan[]
 }
 
 export default function LoansPage() {
@@ -79,85 +90,176 @@ export default function LoansPage() {
     useState('')
 
   async function loadData() {
-    setLoading(true)
+    setError('')
 
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session },
+    } =
+      await supabase.auth
+        .getSession()
 
-    if (!user) return
+    const user =
+      session?.user
 
-    const { data: membership } =
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
+    const cacheKey =
+      `loans:${user.id}`
+
+    const cached =
+      readCache<LoansSnapshot>(
+        cacheKey
+      )
+
+    if (cached) {
+      setFamilyId(
+        cached.familyId
+      )
+
+      setBooks(
+        cached.books
+      )
+
+      setLoans(
+        cached.loans
+      )
+
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
+    const {
+      data: membership,
+      error:
+        membershipError,
+    } =
       await supabase
-        .from('family_members')
-        .select('family_id')
-        .eq('user_id', user.id)
+        .from(
+          'family_members'
+        )
+        .select(
+          'family_id'
+        )
+        .eq(
+          'user_id',
+          user.id
+        )
         .single()
 
-    if (!membership) return
+    if (
+      membershipError ||
+      !membership
+    ) {
+      if (!cached) {
+        setError(
+          'Biblioteca non trovata.'
+        )
+      }
 
-    setFamilyId(
-      membership.family_id
-    )
+      setLoading(false)
+      return
+    }
 
     const [
       booksResult,
       loansResult,
-    ] = await Promise.all([
-      supabase
-        .from('books')
-        .select(`
-          id,
-          title,
-          authors,
-          cover_url,
-          custom_cover_url,
-          status
-        `)
-        .eq(
-          'family_id',
-          membership.family_id
-        )
-        .order('title'),
-
-      supabase
-        .from('loans')
-        .select(`
-          id,
-          book_id,
-          borrower_name,
-          loan_date,
-          expected_return_date,
-          return_date,
-          notes,
-          books (
+    ] =
+      await Promise.all([
+        supabase
+          .from('books')
+          .select(`
             id,
             title,
             authors,
             cover_url,
             custom_cover_url,
             status
+          `)
+          .eq(
+            'family_id',
+            membership.family_id
           )
-        `)
-        .eq(
-          'family_id',
-          membership.family_id
+          .order('title'),
+
+        supabase
+          .from('loans')
+          .select(`
+            id,
+            book_id,
+            borrower_name,
+            loan_date,
+            expected_return_date,
+            return_date,
+            notes,
+            books (
+              id,
+              title,
+              authors,
+              cover_url,
+              custom_cover_url,
+              status
+            )
+          `)
+          .eq(
+            'family_id',
+            membership.family_id
+          )
+          .order(
+            'loan_date',
+            {
+              ascending:
+                false,
+            }
+          ),
+      ])
+
+    if (
+      booksResult.error ||
+      loansResult.error
+    ) {
+      if (!cached) {
+        setError(
+          'Errore nel caricamento dei prestiti.'
         )
-        .order(
-          'loan_date',
-          {
-            ascending: false,
-          }
-        ),
-    ])
+      }
+
+      setLoading(false)
+      return
+    }
+
+    const snapshot:
+      LoansSnapshot = {
+        familyId:
+          membership.family_id,
+
+        books:
+          (booksResult.data ??
+            []) as Book[],
+
+        loans:
+          (loansResult.data ??
+            []) as unknown as Loan[],
+      }
+
+    setFamilyId(
+      snapshot.familyId
+    )
 
     setBooks(
-      booksResult.data ?? []
+      snapshot.books
     )
 
     setLoans(
-      (loansResult.data ??
-        []) as unknown as Loan[]
+      snapshot.loans
+    )
+
+    writeCache(
+      cacheKey,
+      snapshot
     )
 
     setLoading(false)
@@ -226,6 +328,13 @@ export default function LoansPage() {
         bookId
       )
 
+    removeCaches([
+      `loans:${user.id}`,
+      `home:${user.id}`,
+      `catalog:${user.id}`,
+      `shuffle:${user.id}`,
+    ])
+
     setBookId('')
     setBorrower('')
     setExpectedReturn('')
@@ -239,6 +348,12 @@ export default function LoansPage() {
   async function returnBook(
     loan: Loan
   ) {
+    const {
+      data: { user },
+    } =
+      await supabase.auth
+        .getUser()
+
     const today =
       new Date()
         .toISOString()
@@ -264,6 +379,15 @@ export default function LoansPage() {
         'id',
         loan.book_id
       )
+
+    if (user) {
+      removeCaches([
+        `loans:${user.id}`,
+        `home:${user.id}`,
+        `catalog:${user.id}`,
+        `shuffle:${user.id}`,
+      ])
+    }
 
     await loadData()
   }

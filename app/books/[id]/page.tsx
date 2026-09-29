@@ -41,6 +41,7 @@ import BookSynopsis from '@/components/BookSynopsis'
 import BookMetadataSections from '@/components/BookMetadataSections'
 import BookContributors from '@/components/BookContributors'
 import ReadingStateCard from '@/components/ReadingStateCard'
+import BookCitations from '@/components/BookCitations'
 import BookBookmarkCard from '@/components/BookBookmarkCard'
 import ReadingPresence from '@/components/ReadingPresence'
 import BookCopiesPanel from '@/components/BookCopiesPanel'
@@ -1093,6 +1094,20 @@ export default function BookPage() {
               bookId={book.id}
               pages={book.pages}
             />
+
+            {book.edition_key && (
+              <BookCitations
+                familyId={
+                  book.family_id
+                }
+                editionKey={
+                  book.edition_key
+                }
+                pages={
+                  book.pages
+                }
+              />
+            )}
 
             <BookContributors
               translators={book.translators}

@@ -728,7 +728,7 @@ export default function ShufflePage() {
   return (
     <main className="exl-page overflow-x-hidden">
 
-      <div className="max-w-xl mx-auto px-4 sm:px-5 pt-[calc(16px+env(safe-area-inset-top))] pb-32">
+      <div className="max-w-xl mx-auto px-4 sm:px-5 pt-[calc(16px+env(safe-area-inset-top))]">
 
         <div className="flex items-center justify-between">
 

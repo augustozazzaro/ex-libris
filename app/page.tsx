@@ -863,7 +863,7 @@ export default function Home() {
   return (
     <main className="exl-page">
 
-      <div className="max-w-5xl mx-auto px-5 pt-[calc(18px+env(safe-area-inset-top))] md:pt-10 pb-32">
+      <div className="max-w-5xl mx-auto px-5 pt-[calc(18px+env(safe-area-inset-top))] md:pt-10">
 
         {/* HEADER */}
         <header className="flex items-center justify-between gap-4">

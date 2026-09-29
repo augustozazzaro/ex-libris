@@ -524,3 +524,25 @@ body {
   }
 }
 
+
+/* ---------------------------------------------------------
+   EX LIBRIS — PAGE BOTTOM SPACING
+   Evita spazio bianco eccessivo sotto il contenuto.
+--------------------------------------------------------- */
+
+:root {
+  --exl-bottom-nav-space:
+    calc(78px + env(safe-area-inset-bottom));
+}
+
+.exl-page {
+  min-height: 100dvh;
+  padding-bottom:
+    var(--exl-bottom-nav-space);
+}
+
+@media (min-width: 768px) {
+  .exl-page {
+    padding-bottom: 24px;
+  }
+}

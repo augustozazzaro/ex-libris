@@ -59,7 +59,7 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body>
-        <div className="pb-24 md:pb-0">
+        <div>
           {children}
         </div>
 

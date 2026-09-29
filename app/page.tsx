@@ -917,7 +917,7 @@ export default function Home() {
                 )
               )
             }}
-            className="flex gap-3 overflow-x-auto snap-x snap-mandatory exl-scrollbar-none -mx-5 px-5"
+            className="flex gap-3 overflow-x-auto snap-x snap-mandatory exl-scrollbar-none mt-3 pt-1 pb-1 pr-3 scroll-px-0"
           >
 
             {libraryWidgets.map(
@@ -1570,7 +1570,7 @@ function ReadingHomeTile({
       whileTap={{
         scale: 0.97,
       }}
-      className="min-w-[156px] snap-start py-1 first:ml-0 last:mr-1"
+      className="min-w-[156px] snap-start shrink-0"
     >
       <Link
         href={href}

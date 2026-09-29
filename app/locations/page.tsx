@@ -25,6 +25,10 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
+import {
+  readCache,
+  writeCache,
+} from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
 type Location = {
@@ -41,6 +45,12 @@ type Book = {
   location_id: string | null
   cover_url: string | null
   custom_cover_url: string | null
+}
+
+type LocationsSnapshot = {
+  familyId: string
+  locations: Location[]
+  books: Book[]
 }
 
 export default function LocationsPage() {
@@ -93,67 +103,158 @@ export default function LocationsPage() {
     useState('')
 
   async function loadData() {
-    setLoading(true)
+    setError('')
 
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session },
+    } =
+      await supabase.auth
+        .getSession()
 
-    if (!user) return
+    const user =
+      session?.user
 
-    const { data: membership } =
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
+    const cacheKey =
+      `locations:${user.id}`
+
+    const cached =
+      readCache<LocationsSnapshot>(
+        cacheKey
+      )
+
+    if (cached) {
+      setFamilyId(
+        cached.familyId
+      )
+
+      setLocations(
+        cached.locations
+      )
+
+      setBooks(
+        cached.books
+      )
+
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
+    const {
+      data: membership,
+      error:
+        membershipError,
+    } =
       await supabase
-        .from('family_members')
-        .select('family_id')
-        .eq('user_id', user.id)
+        .from(
+          'family_members'
+        )
+        .select(
+          'family_id'
+        )
+        .eq(
+          'user_id',
+          user.id
+        )
         .single()
 
-    if (!membership) return
+    if (
+      membershipError ||
+      !membership
+    ) {
+      if (!cached) {
+        setError(
+          'Biblioteca non trovata.'
+        )
+      }
 
-    setFamilyId(
-      membership.family_id
-    )
+      setLoading(false)
+      return
+    }
 
     const [
       locationsResult,
       booksResult,
-    ] = await Promise.all([
-      supabase
-        .from('locations')
-        .select(`
-          id,
-          name,
-          location_type,
-          parent_id
-        `)
-        .eq(
-          'family_id',
-          membership.family_id
-        )
-        .order('name'),
+    ] =
+      await Promise.all([
+        supabase
+          .from('locations')
+          .select(`
+            id,
+            name,
+            location_type,
+            parent_id
+          `)
+          .eq(
+            'family_id',
+            membership.family_id
+          )
+          .order('name'),
 
-      supabase
-        .from('books')
-        .select(`
-          id,
-          title,
-          authors,
-          location_id,
-          cover_url,
-          custom_cover_url
-        `)
-        .eq(
-          'family_id',
-          membership.family_id
-        ),
-    ])
+        supabase
+          .from('books')
+          .select(`
+            id,
+            title,
+            authors,
+            location_id,
+            cover_url,
+            custom_cover_url
+          `)
+          .eq(
+            'family_id',
+            membership.family_id
+          ),
+      ])
+
+    if (
+      locationsResult.error ||
+      booksResult.error
+    ) {
+      if (!cached) {
+        setError(
+          'Errore nel caricamento delle posizioni.'
+        )
+      }
+
+      setLoading(false)
+      return
+    }
+
+    const snapshot:
+      LocationsSnapshot = {
+        familyId:
+          membership.family_id,
+
+        locations:
+          (locationsResult.data ??
+            []) as Location[],
+
+        books:
+          (booksResult.data ??
+            []) as Book[],
+      }
+
+    setFamilyId(
+      snapshot.familyId
+    )
 
     setLocations(
-      locationsResult.data ?? []
+      snapshot.locations
     )
 
     setBooks(
-      booksResult.data ?? []
+      snapshot.books
+    )
+
+    writeCache(
+      cacheKey,
+      snapshot
     )
 
     setLoading(false)

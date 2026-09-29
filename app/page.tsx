@@ -501,14 +501,16 @@ export default function Home() {
         <motion.section
           initial={{
             opacity: 0,
-            y: 8,
+            y: 7,
+            scale: 0.995,
           }}
           animate={{
             opacity: 1,
             y: 0,
+            scale: 1,
           }}
           transition={{
-            duration: 0.28,
+            duration: 0.34,
             ease: [
               0.22,
               1,
@@ -516,125 +518,169 @@ export default function Home() {
               1,
             ],
           }}
-          className="relative overflow-hidden rounded-[32px] mt-7 bg-[#5E7FA3] text-white min-h-[225px] shadow-[0_18px_45px_rgba(0,0,0,0.12)]"
+          className="relative isolate overflow-hidden rounded-[34px] mt-7 min-h-[238px] border border-white/70 dark:border-white/[0.08] bg-[#EEEAE2] dark:bg-[#202022] shadow-[0_18px_55px_rgba(0,0,0,0.11)]"
         >
 
-          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.10] via-transparent to-black/[0.12]" />
+          {/* Atmosfera derivata dall'ultimo libro */}
+          {featuredCover ? (
+            <>
+              <div
+                className="absolute inset-[-45px] bg-cover bg-center blur-[42px] scale-110 opacity-[0.30] dark:opacity-[0.26]"
+                style={{
+                  backgroundImage:
+                    `url("${featuredCover}")`,
+                }}
+              />
 
-          <div className="absolute -right-16 -top-20 w-64 h-64 rounded-full bg-white/[0.08]" />
+              <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(246,243,237,0.94)_0%,rgba(246,243,237,0.86)_46%,rgba(246,243,237,0.42)_100%)] dark:bg-[linear-gradient(105deg,rgba(31,31,33,0.96)_0%,rgba(31,31,33,0.90)_48%,rgba(31,31,33,0.56)_100%)]" />
+            </>
+          ) : (
+            <>
+              <div className="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-[#5E7FA3]/18 blur-[75px]" />
+              <div className="absolute -bottom-24 -left-20 w-72 h-72 rounded-full bg-[#DDB342]/12 blur-[80px]" />
+            </>
+          )}
 
-          <div className="relative h-full min-h-[225px] p-6 flex">
+          {/* Luce superficiale */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/45 via-white/10 to-transparent dark:from-white/[0.06] dark:via-transparent" />
 
-            <div className="flex-1 min-w-0 flex flex-col justify-between pr-[116px] sm:pr-[180px]">
+          <div className="relative min-h-[238px] p-5 sm:p-6">
 
-              <div>
+            <div className="flex items-start justify-between gap-4">
 
-                <div className="flex items-center gap-2 text-white/70 text-[11px] uppercase tracking-[0.08em]">
+              <div className="min-w-0 pr-[108px] sm:pr-[165px]">
+
+                <div className="inline-flex items-center gap-2 h-8 px-3 rounded-full bg-white/50 dark:bg-white/[0.08] backdrop-blur-md border border-white/60 dark:border-white/[0.08] text-[#636366] dark:text-[#c7c7cc]">
 
                   <BookOpen
-                    size={14}
+                    size={13}
+                    strokeWidth={2}
                   />
 
-                  Biblioteca personale
+                  <span className="text-[10px] uppercase tracking-[0.09em] font-semibold">
+                    Biblioteca personale
+                  </span>
 
                 </div>
 
-                <div className="flex items-end gap-2 mt-3">
+                <div className="mt-4">
 
-                  <span className="text-[48px] sm:text-[56px] leading-none font-bold tracking-[-0.06em]">
-                    {books.length}
-                  </span>
+                  <div className="flex items-end gap-2">
 
-                  <span className="text-white/65 text-sm pb-1">
-                    {books.length === 1
-                      ? 'libro'
-                      : 'libri'}
-                  </span>
+                    <span className="text-[51px] sm:text-[58px] leading-[0.88] font-bold tracking-[-0.065em]">
+                      {books.length}
+                    </span>
+
+                    <span className="text-[#77777c] dark:text-[#aeaeb2] text-[13px] font-medium pb-1">
+                      {books.length === 1
+                        ? 'libro'
+                        : 'libri'}
+                    </span>
+
+                  </div>
+
+                  <p className="text-[#636366] dark:text-[#aeaeb2] text-[13px] leading-relaxed mt-3 max-w-[255px]">
+                    La tua biblioteca, sempre con te.
+                  </p>
 
                 </div>
 
               </div>
 
-              {featuredBook ? (
-                <Link
-                  href={`/books/${featuredBook.id}`}
-                  className="block mt-7 group"
-                >
+            </div>
 
-                  <p className="text-white/55 text-[10px] uppercase tracking-[0.09em]">
+
+            {featuredBook ? (
+              <Link
+                href={`/books/${featuredBook.id}`}
+                className="group absolute left-5 sm:left-6 bottom-5 sm:bottom-6 right-[118px] sm:right-[180px]"
+              >
+
+                <div className="pt-3 border-t border-black/[0.07] dark:border-white/[0.10]">
+
+                  <p className="text-[#8e8e93] text-[9px] uppercase tracking-[0.10em] font-semibold">
                     Ultimo aggiunto
                   </p>
 
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-1.5 mt-1.5">
 
-                    <p className="font-semibold leading-tight line-clamp-2 max-w-[260px]">
+                    <p className="font-semibold text-[14px] leading-tight line-clamp-1">
                       {featuredBook.title}
                     </p>
 
                     <ChevronRight
-                      size={16}
-                      className="text-white/55 shrink-0 transition-transform group-hover:translate-x-0.5"
+                      size={14}
+                      className="text-[#8e8e93] shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
                     />
 
                   </div>
 
                   {featuredBook.authors?.[0] && (
-                    <p className="text-white/55 text-xs mt-1 truncate">
+                    <p className="text-[#8e8e93] text-[11px] mt-1 truncate">
                       {featuredBook.authors[0]}
                     </p>
                   )}
 
-                </Link>
-              ) : (
-                <Link
-                  href="/add"
-                  className="inline-flex items-center gap-2 mt-7 font-semibold"
-                >
-                  <Plus size={18} />
-                  Aggiungi il primo libro
-                </Link>
-              )}
+                </div>
 
-            </div>
+              </Link>
+            ) : (
+              <Link
+                href="/add"
+                className="absolute left-5 sm:left-6 bottom-5 sm:bottom-6 inline-flex items-center gap-2 text-[14px] font-semibold"
+              >
+                <Plus size={17} />
+                Aggiungi il primo libro
+              </Link>
+            )}
 
 
             {featuredBook && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  x: 16,
-                  rotate: 3,
-                }}
-                animate={{
-                  opacity: 1,
-                  x: 0,
-                  rotate: 2,
-                }}
-                transition={{
-                  delay: 0.05,
-                  duration: 0.35,
-                  ease: [
-                    0.22,
-                    1,
-                    0.36,
-                    1,
-                  ],
-                }}
-                className="absolute right-[-4px] sm:right-7 top-7 w-[116px] sm:w-[142px] aspect-[2/3] rounded-[15px] overflow-hidden shadow-[0_18px_38px_rgba(0,0,0,0.30)] ring-1 ring-white/20 transform-gpu"
-              >
-                <BookCover
-                  title={
-                    featuredBook.title
-                  }
-                  authors={
-                    featuredBook.authors
-                  }
-                  coverUrl={
-                    featuredCover
-                  }
-                  priority
-                />
-              </motion.div>
+              <div className="absolute right-4 sm:right-8 top-5 sm:top-6">
+
+                {/* seconda sagoma per profondità */}
+                <div className="absolute inset-0 translate-x-[-9px] translate-y-[7px] rotate-[-4deg] rounded-[16px] bg-white/28 dark:bg-white/[0.07] border border-white/35 dark:border-white/[0.08]" />
+
+                <motion.div
+                  initial={{
+                    opacity: 0,
+                    x: 12,
+                    rotate: 5,
+                    scale: 0.96,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    x: 0,
+                    rotate: 2.5,
+                    scale: 1,
+                  }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 270,
+                    damping: 25,
+                    delay: 0.05,
+                  }}
+                  whileHover={{
+                    rotate: 0,
+                    y: -2,
+                  }}
+                  className="relative w-[106px] sm:w-[137px] aspect-[2/3] rounded-[16px] overflow-hidden shadow-[0_18px_42px_rgba(0,0,0,0.22)] ring-1 ring-white/45 dark:ring-white/10 transform-gpu"
+                >
+                  <BookCover
+                    title={
+                      featuredBook.title
+                    }
+                    authors={
+                      featuredBook.authors
+                    }
+                    coverUrl={
+                      featuredCover
+                    }
+                    priority
+                  />
+                </motion.div>
+
+              </div>
             )}
 
           </div>
@@ -645,7 +691,7 @@ export default function Home() {
         {/* SEARCH */}
         <Link
           href="/catalog"
-          className="exl-glass mt-4 h-[58px] rounded-[22px] flex items-center gap-3 px-4 exl-press"
+          className="exl-glass mt-4 h-[60px] rounded-[23px] flex items-center gap-3 px-3.5 exl-press border border-white/45 dark:border-white/[0.06] shadow-[0_8px_24px_rgba(0,0,0,0.045)]"
         >
 
           <div className="w-9 h-9 rounded-[12px] bg-black/[0.045] dark:bg-white/[0.08] flex items-center justify-center shrink-0">

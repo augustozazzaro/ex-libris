@@ -15,13 +15,16 @@ type Props = {
   authors?: string[] | string | null
   coverUrl?: string | null
   className?: string
-
-  /*
-   * Usalo SOLO per poche copertine
-   * immediatamente visibili.
-   */
   priority?: boolean
 }
+
+/*
+ * Rimane vivo per tutta la sessione SPA.
+ * Se una cover è già comparsa, quando il componente
+ * viene rimontato non facciamo riapparire il fallback.
+ */
+const loadedCoverUrls =
+  new Set<string>()
 
 const palettes = [
   {
@@ -81,28 +84,13 @@ function hashString(
   return Math.abs(hash)
 }
 
-export default function BookCover({
+function GeneratedCover({
   title,
   authors,
-  coverUrl,
-  className = '',
-  priority = false,
-}: Props) {
-  const [imageFailed, setImageFailed] =
-    useState(false)
-
-  const [imageLoaded, setImageLoaded] =
-    useState(false)
-
-  /*
-   * Importantissimo quando lo stesso
-   * componente riceve una nuova URL.
-   */
-  useEffect(() => {
-    setImageFailed(false)
-    setImageLoaded(false)
-  }, [coverUrl])
-
+}: {
+  title: string
+  authors?: string[] | string | null
+}) {
   const palette =
     useMemo(() => {
       const authorSeed =
@@ -110,12 +98,11 @@ export default function BookCover({
           ? authors.join('-')
           : authors ?? ''
 
-      const seed =
-        `${title}-${authorSeed}`
-
       return palettes[
-        hashString(seed) %
-        palettes.length
+        hashString(
+          `${title}-${authorSeed}`
+        ) %
+          palettes.length
       ]
     }, [
       title,
@@ -129,13 +116,7 @@ export default function BookCover({
       : authors ||
         'Autore non disponibile'
 
-  /*
-   * Placeholder deterministico:
-   * rimane sotto l'immagine vera.
-   * In questo modo non abbiamo flash
-   * grigi mentre la cover arriva.
-   */
-  const fallback = (
+  return (
     <div
       className="absolute inset-0 overflow-hidden p-4 flex flex-col justify-between"
       style={{
@@ -145,6 +126,7 @@ export default function BookCover({
           palette.foreground,
       }}
     >
+
       <div
         className="absolute top-0 right-0 w-20 h-20 rounded-bl-[40px] opacity-40"
         style={{
@@ -178,58 +160,94 @@ export default function BookCover({
         </p>
 
       </div>
+
     </div>
   )
+}
+
+export default function BookCover({
+  title,
+  authors,
+  coverUrl,
+  className = '',
+  priority = false,
+}: Props) {
+  const [
+    imageFailed,
+    setImageFailed,
+  ] =
+    useState(false)
+
+  const [
+    imageReady,
+    setImageReady,
+  ] =
+    useState(
+      Boolean(
+        coverUrl &&
+        loadedCoverUrls.has(
+          coverUrl
+        )
+      )
+    )
+
+  useEffect(() => {
+    setImageFailed(false)
+
+    setImageReady(
+      Boolean(
+        coverUrl &&
+        loadedCoverUrls.has(
+          coverUrl
+        )
+      )
+    )
+  }, [coverUrl])
 
   return (
     <div
       className={`relative w-full h-full overflow-hidden ${className}`}
     >
-      {fallback}
+
+      <GeneratedCover
+        title={title}
+        authors={authors}
+      />
 
       {coverUrl &&
         !imageFailed && (
         <img
           src={coverUrl}
           alt={title}
-
-          loading={
-            priority
-              ? 'eager'
-              : 'lazy'
-          }
-
+          loading="eager"
+          decoding="async"
           fetchPriority={
             priority
               ? 'high'
               : 'auto'
           }
+          onLoad={() => {
+            loadedCoverUrls.add(
+              coverUrl
+            )
 
-          decoding="async"
-
-          onLoad={() =>
-            setImageLoaded(
+            setImageReady(
               true
             )
-          }
-
+          }}
           onError={() => {
             setImageFailed(
               true
             )
-
-            setImageLoaded(
-              false
-            )
           }}
-
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
-            imageLoaded
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-100 ${
+            imageReady
               ? 'opacity-100'
               : 'opacity-0'
           }`}
         />
       )}
+
     </div>
   )
 }

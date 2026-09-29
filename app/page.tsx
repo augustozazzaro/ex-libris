@@ -19,6 +19,7 @@ import {
   BookOpen,
   ChevronRight,
   Heart,
+  Bookmark,
   Search,
   ArrowUpRight,
   Plus,
@@ -47,6 +48,8 @@ type Book = {
 type HomeSnapshot = {
   books: Book[]
   favoriteCount: number
+  toReadCount: number
+  citationCount: number
 }
 
 export default function Home() {
@@ -58,6 +61,8 @@ export default function Home() {
 
   const [books, setBooks] = useState<Book[]>([])
   const [favoriteCount, setFavoriteCount] = useState(0)
+  const [toReadCount, setToReadCount] = useState(0)
+  const [citationCount, setCitationCount] = useState(0)
 
   const [authenticated, setAuthenticated] =
     useState<boolean | null>(null)
@@ -100,7 +105,15 @@ export default function Home() {
       )
 
       setFavoriteCount(
-        cached.favoriteCount
+        cached.favoriteCount ?? 0
+      )
+
+      setToReadCount(
+        cached.toReadCount ?? 0
+      )
+
+      setCitationCount(
+        cached.citationCount ?? 0
       )
 
       setLoading(false)
@@ -138,6 +151,8 @@ export default function Home() {
     const [
       booksResult,
       favoriteResult,
+      toReadResult,
+      citationResult,
     ] = await Promise.all([
       supabase
         .from('books')
@@ -179,6 +194,42 @@ export default function Home() {
           'favorite',
           true
         ),
+
+      supabase
+        .from(
+          'user_book_state'
+        )
+        .select(
+          'book_id',
+          {
+            count: 'exact',
+            head: true,
+          }
+        )
+        .eq(
+          'user_id',
+          user.id
+        )
+        .eq(
+          'reading_status',
+          'to_read'
+        ),
+
+      supabase
+        .from(
+          'book_citations'
+        )
+        .select(
+          'id',
+          {
+            count: 'exact',
+            head: true,
+          }
+        )
+        .eq(
+          'user_id',
+          user.id
+        ),
     ])
 
     if (
@@ -204,6 +255,16 @@ export default function Home() {
           favoriteResult.count ??
           cached?.favoriteCount ??
           0,
+
+        toReadCount:
+          toReadResult.count ??
+          cached?.toReadCount ??
+          0,
+
+        citationCount:
+          citationResult.count ??
+          cached?.citationCount ??
+          0,
       }
 
     setBooks(
@@ -212,6 +273,14 @@ export default function Home() {
 
     setFavoriteCount(
       snapshot.favoriteCount
+    )
+
+    setToReadCount(
+      snapshot.toReadCount
+    )
+
+    setCitationCount(
+      snapshot.citationCount
     )
 
     writeCache(
@@ -598,53 +667,6 @@ export default function Home() {
         </Link>
 
 
-        {/* AZIONI RAPIDE */}
-        <section className="mt-7">
-
-          <div className="flex items-center justify-between px-1 mb-3">
-
-            <h2 className="text-[19px] font-bold tracking-[-0.025em]">
-              Azioni rapide
-            </h2>
-
-          </div>
-
-          <div className="grid grid-cols-4 gap-2">
-
-            <HomeQuickAction
-              href="/add"
-              label="Aggiungi"
-              icon={Plus}
-            />
-
-            <HomeQuickAction
-              href="/shuffle"
-              label="Shuffle"
-              icon={Shuffle}
-            />
-
-            <HomeQuickAction
-              href="/citations"
-              label="Citazioni"
-              icon={Quote}
-            />
-
-            <HomeQuickAction
-              href="/loans"
-              label="Prestiti"
-              icon={ArrowUpRight}
-              badge={
-                loanedCount > 0
-                  ? loanedCount
-                  : undefined
-              }
-            />
-
-          </div>
-
-        </section>
-
-
         {/* DISCOVERY / SHUFFLE */}
         {books.length > 1 && (
           <motion.div
@@ -701,6 +723,68 @@ export default function Home() {
             </Link>
           </motion.div>
         )}
+
+
+        {/* RACCOLTE PERSONALI */}
+        <section className="mt-8">
+
+          <div className="px-1 mb-3">
+
+            <p className="text-[#8e8e93] text-[11px] uppercase tracking-[0.08em]">
+              Per te
+            </p>
+
+            <h2 className="text-[22px] font-bold tracking-[-0.03em] mt-0.5">
+              Le tue raccolte
+            </h2>
+
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+
+            <HomeStatCard
+              href="/favorites"
+              label="Preferiti"
+              subtitle="La tua selezione"
+              value={favoriteCount}
+              icon={Heart}
+              accent="#DDB342"
+            />
+
+            <HomeStatCard
+              href="/my-books?filter=to_read"
+              label="Da leggere"
+              subtitle="La tua lista"
+              value={toReadCount}
+              icon={Bookmark}
+              accent="#5E7FA3"
+            />
+
+            <HomeStatCard
+              href="/citations"
+              label="Citazioni"
+              subtitle="Frasi da ricordare"
+              value={citationCount}
+              icon={Quote}
+              accent="#76678A"
+            />
+
+            <HomeStatCard
+              href="/loans"
+              label="Prestiti"
+              subtitle={
+                loanedCount
+                  ? 'Libri fuori casa'
+                  : 'Tutto a casa'
+              }
+              value={loanedCount}
+              icon={ArrowUpRight}
+              accent="#C76955"
+            />
+
+          </div>
+
+        </section>
 
 
         {/* RECENTI */}
@@ -819,79 +903,6 @@ export default function Home() {
         )}
 
 
-        {/* SECONDARY INFO */}
-        <section className="grid grid-cols-2 gap-3 mt-6">
-
-          <Link
-            href="/favorites"
-            className="exl-glass rounded-[24px] p-4 min-h-[118px] flex flex-col justify-between exl-press"
-          >
-
-            <div className="flex items-start justify-between">
-
-              <div className="w-9 h-9 rounded-[12px] bg-[#DDB342]/15 flex items-center justify-center">
-                <Heart
-                  size={18}
-                  className="text-[#DDB342]"
-                  fill="currentColor"
-                />
-              </div>
-
-              <span className="text-[24px] font-bold tracking-[-0.04em]">
-                {favoriteCount}
-              </span>
-
-            </div>
-
-            <div>
-              <p className="font-semibold">
-                Preferiti
-              </p>
-
-              <p className="text-[#8e8e93] text-xs mt-0.5">
-                La tua selezione
-              </p>
-            </div>
-
-          </Link>
-
-
-          <Link
-            href="/loans"
-            className="exl-glass rounded-[24px] p-4 min-h-[118px] flex flex-col justify-between exl-press"
-          >
-
-            <div className="flex items-start justify-between">
-
-              <div className="w-9 h-9 rounded-[12px] bg-[#C76955]/15 flex items-center justify-center">
-                <ArrowUpRight
-                  size={18}
-                  className="text-[#C76955]"
-                />
-              </div>
-
-              <span className="text-[24px] font-bold tracking-[-0.04em]">
-                {loanedCount}
-              </span>
-
-            </div>
-
-            <div>
-              <p className="font-semibold">
-                Prestiti
-              </p>
-
-              <p className="text-[#8e8e93] text-xs mt-0.5">
-                {loanedCount
-                  ? 'Libri fuori casa'
-                  : 'Tutto a casa'}
-              </p>
-            </div>
-
-          </Link>
-
-        </section>
-
       </div>
 
     </main>
@@ -899,44 +910,66 @@ export default function Home() {
 }
 
 
-function HomeQuickAction({
+function HomeStatCard({
   href,
   label,
+  subtitle,
+  value,
   icon: Icon,
-  badge,
+  accent,
 }: {
   href: string
   label: string
+  subtitle: string
+  value: number
   icon: typeof BookOpen
-  badge?: number
+  accent: string
 }) {
   return (
     <motion.div
       whileTap={{
-        scale: 0.93,
+        scale: 0.97,
       }}
     >
       <Link
         href={href}
-        className="relative exl-glass rounded-[20px] min-h-[82px] px-2 py-3 flex flex-col items-center justify-center gap-2 text-center exl-press"
+        className="exl-glass rounded-[24px] p-4 min-h-[122px] flex flex-col justify-between exl-press"
       >
 
-        <div className="w-9 h-9 rounded-[12px] bg-black/[0.045] dark:bg-white/[0.08] flex items-center justify-center">
-          <Icon
-            size={18}
-            strokeWidth={2}
-          />
+        <div className="flex items-start justify-between gap-3">
+
+          <div
+            className="w-10 h-10 rounded-[13px] flex items-center justify-center"
+            style={{
+              backgroundColor:
+                `${accent}1F`,
+              color:
+                accent,
+            }}
+          >
+            <Icon
+              size={19}
+              strokeWidth={2}
+            />
+          </div>
+
+          <span className="text-[26px] leading-none font-bold tracking-[-0.045em] tabular-nums">
+            {value}
+          </span>
+
         </div>
 
-        <span className="text-[11px] font-semibold">
-          {label}
-        </span>
+        <div className="mt-5">
 
-        {badge !== undefined && (
-          <span className="absolute top-2 right-2 min-w-5 h-5 px-1 rounded-full bg-[#C76955] text-white text-[10px] font-bold flex items-center justify-center">
-            {badge}
-          </span>
-        )}
+          <p className="font-semibold text-[15px]">
+            {label}
+          </p>
+
+          <p className="text-[#8e8e93] text-[11px] mt-0.5">
+            {subtitle}
+          </p>
+
+        </div>
 
       </Link>
     </motion.div>

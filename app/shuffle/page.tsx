@@ -24,6 +24,7 @@ import {
 
 import {
   AnimatePresence,
+  animate,
   motion,
   useMotionValue,
   useTransform,
@@ -763,7 +764,7 @@ export default function ShufflePage() {
           <AnimatePresence
             initial={false}
             custom={direction}
-            mode="popLayout"
+            mode="sync"
           >
             <motion.article
               key={currentBook.id}
@@ -787,11 +788,7 @@ export default function ShufflePage() {
                     ? -160
                     : 160,
                 opacity: 0,
-                rotate:
-                  direction > 0
-                    ? -5
-                    : 5,
-                scale: 0.96,
+                scale: 0.975,
               }}
               transition={{
                 type: 'spring',
@@ -810,9 +807,18 @@ export default function ShufflePage() {
                 right: 0,
               }}
 
-              dragElastic={0.9}
+              dragElastic={0.38}
+
+              dragTransition={{
+                bounceStiffness: 520,
+                bounceDamping: 38,
+              }}
 
               dragMomentum={false}
+
+              onDragStart={() => {
+                dragX.stop()
+              }}
 
               onDrag={(
                 _,
@@ -865,7 +871,16 @@ export default function ShufflePage() {
                 dragThresholdRef.current =
                   false
 
-                dragX.set(0)
+                animate(
+                  dragX,
+                  0,
+                  {
+                    type: 'spring',
+                    stiffness: 560,
+                    damping: 42,
+                    mass: 0.55,
+                  }
+                )
 
                 if (shouldNext) {
                   goNext(false)
@@ -886,7 +901,7 @@ export default function ShufflePage() {
                   'transform',
               }}
 
-              className="relative overflow-hidden rounded-[34px] shadow-[0_18px_50px_rgba(0,0,0,0.14)] cursor-grab active:cursor-grabbing touch-pan-y select-none transform-gpu [backface-visibility:hidden] [contain:paint]"
+              className="relative overflow-hidden rounded-[34px] shadow-[0_16px_42px_rgba(0,0,0,0.13)] cursor-grab active:cursor-grabbing touch-pan-y select-none transform-gpu [backface-visibility:hidden] [contain:paint]"
             >
 
               {/* ATMOSFERA DALLA COPERTINA */}

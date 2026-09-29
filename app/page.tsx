@@ -593,7 +593,7 @@ export default function Home() {
   }
 
   const libraryWidgets =
-    useMemo(() => {
+    (() => {
       const childrenMap =
         new Map<
           string,
@@ -742,10 +742,7 @@ export default function Home() {
             true,
         },
       ]
-    }, [
-      books,
-      locations,
-    ])
+    })()
 
   const readingRows =
     readingStates.filter(

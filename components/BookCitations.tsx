@@ -30,6 +30,9 @@ import {
 import {
   haptic,
 } from '@/utils/haptics'
+import {
+  removeCaches,
+} from '@/utils/exlibris-cache'
 
 import ExLibrisConfirmDialog from '@/components/ExLibrisConfirmDialog'
 
@@ -397,6 +400,11 @@ export default function BookCitations({
 
     haptic('success')
 
+    removeCaches([
+      `citations:${user.id}`,
+      `profile:${user.id}`,
+    ])
+
     await loadCitations()
 
     setSaving(false)
@@ -454,6 +462,11 @@ export default function BookCitations({
             target.id
         )
     )
+
+    removeCaches([
+      `citations:${user.id}`,
+      `profile:${user.id}`,
+    ])
 
     haptic('success')
   }

@@ -27,7 +27,8 @@ import {
   Mail,
   Pencil,
   Target,
-type LucideIcon
+  Quote,
+  type LucideIcon,
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
@@ -54,6 +55,14 @@ type Book = {
   custom_cover_url: string | null
 }
 
+type CitationPreview = {
+  id: string
+  quote_text: string
+  page: number | null
+  created_at: string
+}
+
+
 type ProfileSnapshot = {
   email: string
   fullName: string
@@ -63,6 +72,8 @@ type ProfileSnapshot = {
   readingGoal: number
   states: StateRow[]
   books: Book[]
+  citationCount: number
+  latestCitation: CitationPreview | null
 }
 
 export default function ProfilePage() {
@@ -79,6 +90,12 @@ export default function ProfilePage() {
 
   const [states, setStates] = useState<StateRow[]>([])
   const [books, setBooks] = useState<Book[]>([])
+
+  const [citationCount, setCitationCount] =
+    useState(0)
+
+  const [latestCitation, setLatestCitation] =
+    useState<CitationPreview | null>(null)
 
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -134,6 +151,12 @@ export default function ProfilePage() {
       setReadingGoal(cached.readingGoal)
       setStates(cached.states)
       setBooks(cached.books)
+      setCitationCount(
+        cached.citationCount ?? 0
+      )
+      setLatestCitation(
+        cached.latestCitation ?? null
+      )
       setLoading(false)
     } else {
       setEmail(
@@ -145,6 +168,8 @@ export default function ProfilePage() {
     const [
       profileResult,
       statesResult,
+      citationCountResult,
+      latestCitationResult,
     ] =
       await Promise.all([
         supabase
@@ -174,6 +199,41 @@ export default function ProfilePage() {
             'user_id',
             user.id
           ),
+
+        supabase
+          .from('book_citations')
+          .select(
+            'id',
+            {
+              count: 'exact',
+              head: true,
+            }
+          )
+          .eq(
+            'user_id',
+            user.id
+          ),
+
+        supabase
+          .from('book_citations')
+          .select(`
+            id,
+            quote_text,
+            page,
+            created_at
+          `)
+          .eq(
+            'user_id',
+            user.id
+          )
+          .order(
+            'created_at',
+            {
+              ascending: false,
+            }
+          )
+          .limit(1)
+          .maybeSingle(),
       ])
 
     const profile =
@@ -248,6 +308,15 @@ export default function ProfilePage() {
 
         books:
           freshBooks,
+
+        citationCount:
+          citationCountResult.count ??
+          0,
+
+        latestCitation:
+          latestCitationResult.data
+            ? latestCitationResult.data as CitationPreview
+            : null,
       }
 
     setEmail(snapshot.email)
@@ -258,6 +327,12 @@ export default function ProfilePage() {
     setReadingGoal(snapshot.readingGoal)
     setStates(snapshot.states)
     setBooks(snapshot.books)
+    setCitationCount(
+      snapshot.citationCount
+    )
+    setLatestCitation(
+      snapshot.latestCitation
+    )
 
     writeCache(
       cacheKey,
@@ -712,6 +787,96 @@ export default function ProfilePage() {
             />
           </Link>
         )}
+
+        <Link
+          href="/citations"
+          className="group block mt-3"
+        >
+          <div className="relative overflow-hidden rounded-[28px] bg-[#5E7FA3] text-white p-5 shadow-[0_14px_40px_rgba(0,0,0,0.10)] exl-press">
+
+            <div className="absolute -right-10 -top-10 opacity-[0.08] pointer-events-none">
+              <Quote
+                size={150}
+                fill="currentColor"
+              />
+            </div>
+
+            <div className="relative">
+
+              <div className="flex items-start justify-between gap-4">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="w-11 h-11 rounded-[15px] bg-white/14 backdrop-blur-md flex items-center justify-center">
+                    <Quote
+                      size={20}
+                      fill="currentColor"
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-white/70 text-[11px] uppercase tracking-[0.08em]">
+                      Commonplace book
+                    </p>
+
+                    <h2 className="font-bold text-[21px] tracking-[-0.025em] mt-0.5">
+                      Le mie citazioni
+                    </h2>
+                  </div>
+
+                </div>
+
+                <div className="flex items-center gap-1">
+
+                  <span className="text-[24px] font-bold tracking-[-0.035em]">
+                    {citationCount}
+                  </span>
+
+                  <ChevronRight
+                    size={18}
+                    className="text-white/70 transition-transform group-hover:translate-x-0.5"
+                  />
+
+                </div>
+
+              </div>
+
+              {latestCitation ? (
+                <div className="mt-5 pt-4 border-t border-white/15">
+
+                  <p className="text-white/65 text-[11px] uppercase tracking-[0.08em]">
+                    Ultima salvata
+                  </p>
+
+                  <p className="text-[16px] leading-relaxed mt-2 line-clamp-3">
+                    “{latestCitation.quote_text}”
+                  </p>
+
+                  {latestCitation.page && (
+                    <p className="text-white/60 text-xs mt-2">
+                      Pagina {latestCitation.page}
+                    </p>
+                  )}
+
+                </div>
+              ) : (
+                <div className="mt-5 pt-4 border-t border-white/15">
+
+                  <p className="text-white/80 text-sm font-medium">
+                    Inizia a raccogliere le frasi che vuoi ricordare.
+                  </p>
+
+                  <p className="text-white/60 text-xs mt-1">
+                    Le ritroverai tutte qui.
+                  </p>
+
+                </div>
+              )}
+
+            </div>
+
+          </div>
+        </Link>
 
         {editing && (
           <section className="exl-glass exl-card p-5 mt-6">

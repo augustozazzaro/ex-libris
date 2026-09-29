@@ -227,6 +227,7 @@ export default function Home() {
       '/loans',
       '/shuffle',
       '/profile',
+      '/citations',
       '/settings',
       '/add',
     ]

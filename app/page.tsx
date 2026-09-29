@@ -917,7 +917,7 @@ export default function Home() {
                 )
               )
             }}
-            className="flex gap-3 overflow-x-auto snap-x snap-mandatory exl-scrollbar-none mt-3 pt-1 pb-1 pr-3 scroll-px-0"
+            className="flex gap-3 overflow-x-auto overflow-y-visible snap-x snap-mandatory exl-scrollbar-none mt-3 pt-2 pb-2 pr-3 scroll-px-0"
           >
 
             {libraryWidgets.map(

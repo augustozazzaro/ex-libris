@@ -41,6 +41,7 @@ import BookSynopsis from '@/components/BookSynopsis'
 import BookMetadataSections from '@/components/BookMetadataSections'
 import BookContributors from '@/components/BookContributors'
 import ReadingStateCard from '@/components/ReadingStateCard'
+import BookCopiesPanel from '@/components/BookCopiesPanel'
 
 import {
   buildLocationPath,
@@ -1023,6 +1024,27 @@ export default function BookPage() {
                 null
               }
             />
+
+            {copyCount > 1 &&
+              book.edition_key && (
+                <BookCopiesPanel
+                  familyId={
+                    book.family_id
+                  }
+                  editionKey={
+                    book.edition_key
+                  }
+                  currentBookId={
+                    book.id
+                  }
+                  locations={
+                    locations
+                  }
+                  onChanged={
+                    loadBook
+                  }
+                />
+              )}
 
             {book.description ? (
               <BookSynopsis

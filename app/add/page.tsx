@@ -4,6 +4,7 @@ import {
   FormEvent,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from 'react'
 
@@ -30,6 +31,7 @@ import {
 import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
 import IsbnScanner from '@/components/IsbnScanner'
+import ExLibrisConfirmDialog from '@/components/ExLibrisConfirmDialog'
 
 type Candidate = {
   source: string
@@ -173,6 +175,22 @@ export default function AddBookPage() {
 
   const [savedMessage, setSavedMessage] =
     useState('')
+
+  const [
+    duplicatePromptOpen,
+    setDuplicatePromptOpen,
+  ] = useState(false)
+
+  const [
+    duplicatePromptTitle,
+    setDuplicatePromptTitle,
+  ] = useState('')
+
+  const duplicateResolver =
+    useRef<
+      ((value: boolean) => void) |
+      null
+    >(null)
 
   useEffect(() => {
     async function initialize() {
@@ -500,6 +518,40 @@ export default function AddBookPage() {
     )
   }
 
+  function askDuplicateConfirmation(
+    title: string
+  ) {
+    setDuplicatePromptTitle(
+      title
+    )
+
+    setDuplicatePromptOpen(
+      true
+    )
+
+    return new Promise<boolean>(
+      resolve => {
+        duplicateResolver.current =
+          resolve
+      }
+    )
+  }
+
+  function resolveDuplicateConfirmation(
+    value: boolean
+  ) {
+    setDuplicatePromptOpen(
+      false
+    )
+
+    duplicateResolver.current?.(
+      value
+    )
+
+    duplicateResolver.current =
+      null
+  }
+
   async function saveBook() {
     if (
       !draft ||
@@ -726,8 +778,8 @@ export default function AddBookPage() {
 
     if (sameEdition) {
       const confirmed =
-        window.confirm(
-          `Questa edizione di "${draft.title.trim()}" è già presente nella biblioteca. Vuoi aggiungere un'altra copia?`
+        await askDuplicateConfirmation(
+          draft.title.trim()
         )
 
       if (!confirmed) {
@@ -959,6 +1011,25 @@ export default function AddBookPage() {
           }
         />
       )}
+
+      <ExLibrisConfirmDialog
+        open={
+          duplicatePromptOpen
+        }
+        title="Un'altra copia?"
+        message={`Questa edizione di “${duplicatePromptTitle}” è già nella tua biblioteca. Vuoi aggiungere una nuova copia? Potrai assegnarle una posizione e gestirla separatamente.`}
+        confirmLabel="Aggiungi copia"
+        onCancel={() =>
+          resolveDuplicateConfirmation(
+            false
+          )
+        }
+        onConfirm={() =>
+          resolveDuplicateConfirmation(
+            true
+          )
+        }
+      />
 
       <div className="max-w-3xl mx-auto px-5 pt-[calc(16px+env(safe-area-inset-top))] md:pt-8">
 

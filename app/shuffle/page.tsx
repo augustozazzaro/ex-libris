@@ -5,6 +5,7 @@ import ExLibrisLoader from '@/components/ExLibrisLoader'
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 
@@ -18,7 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
-  RefreshCw,
   Shuffle,
 } from 'lucide-react'
 
@@ -87,6 +87,12 @@ export default function ShufflePage() {
 
   const [error, setError] =
     useState('')
+
+  const [dragX, setDragX] =
+    useState(0)
+
+  const dragThresholdRef =
+    useRef(false)
 
   useEffect(() => {
     loadBooks()
@@ -357,10 +363,14 @@ export default function ShufflePage() {
     return parts.join(' · ')
   }
 
-  function goNext() {
+  function goNext(
+    feedback = true
+  ) {
     if (books.length <= 1) return
 
-    haptic('light')
+    if (feedback) {
+      haptic('light')
+    }
 
     setDirection(1)
     setSaved(false)
@@ -372,10 +382,14 @@ export default function ShufflePage() {
     )
   }
 
-  function goPrevious() {
+  function goPrevious(
+    feedback = true
+  ) {
     if (books.length <= 1) return
 
-    haptic('light')
+    if (feedback) {
+      haptic('light')
+    }
 
     setDirection(-1)
     setSaved(false)
@@ -526,10 +540,30 @@ export default function ShufflePage() {
       currentBook.location_id
     )
 
-  return (
-    <main className="exl-page">
+  const hasDescription =
+    Boolean(
+      currentBook.description
+        ?.trim()
+    )
 
-      <div className="max-w-xl mx-auto px-5 pt-[calc(16px+env(safe-area-inset-top))] pb-32">
+  const nextCover =
+    nextBookData
+      ? (
+          nextBookData.custom_cover_url ||
+          nextBookData.cover_url
+        )
+      : null
+
+  const dragProgress =
+    Math.min(
+      Math.abs(dragX) / 140,
+      1
+    )
+
+  return (
+    <main className="exl-page overflow-x-hidden">
+
+      <div className="max-w-xl mx-auto px-4 sm:px-5 pt-[calc(16px+env(safe-area-inset-top))] pb-32">
 
         <div className="flex items-center justify-between">
 
@@ -540,58 +574,126 @@ export default function ShufflePage() {
             <ArrowLeft size={20} />
           </Link>
 
-          <div className="flex items-center gap-2 text-[#8e8e93] text-sm">
-            <Shuffle size={16} />
+          <div className="flex items-center gap-2">
 
-            <span>
-              {currentIndex + 1} / {books.length}
-            </span>
+            <div className="h-9 px-3 rounded-full bg-black/[0.045] dark:bg-white/[0.08] flex items-center gap-2 text-[#8e8e93] text-xs font-medium">
+              <Shuffle size={14} />
+
+              <span className="tabular-nums">
+                {currentIndex + 1}
+              </span>
+
+              <span className="opacity-40">
+                /
+              </span>
+
+              <span className="tabular-nums">
+                {books.length}
+              </span>
+            </div>
+
           </div>
 
         </div>
 
-        <header className="mt-7">
+        <header className="mt-6 px-1">
 
-          <p className="text-[#5E7FA3] text-sm font-semibold">
+          <p className="text-[#5E7FA3] text-[13px] font-semibold">
             Cosa leggo?
           </p>
 
-          <h1 className="text-[38px] font-bold tracking-[-0.045em] mt-1">
-            Shuffle
-          </h1>
+          <div className="flex items-end justify-between gap-4 mt-0.5">
+
+            <h1 className="text-[38px] font-bold tracking-[-0.05em] leading-none">
+              Shuffle
+            </h1>
+
+            <p className="text-[#8e8e93] text-[11px] text-right md:hidden">
+              Trascina la scheda
+            </p>
+
+          </div>
 
         </header>
 
-        <section className="mt-6 relative min-h-[650px]">
+        <section className="mt-5 relative">
 
+          {/* FRECCE SOLO DESKTOP */}
           {books.length > 1 && (
             <>
               <button
                 type="button"
-                onClick={goPrevious}
+                onClick={() =>
+                  goPrevious()
+                }
                 aria-label="Libro precedente"
-                className="hidden md:flex absolute left-[-54px] top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full exl-glass items-center justify-center exl-press"
+                className="hidden md:flex absolute left-[-56px] top-[42%] -translate-y-1/2 z-40 w-11 h-11 rounded-full exl-glass items-center justify-center exl-press"
               >
                 <ChevronLeft
-                  size={22}
+                  size={21}
                 />
               </button>
 
               <button
                 type="button"
-                onClick={goNext}
+                onClick={() =>
+                  goNext()
+                }
                 aria-label="Libro successivo"
-                className="hidden md:flex absolute right-[-54px] top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full exl-glass items-center justify-center exl-press"
+                className="hidden md:flex absolute right-[-56px] top-[42%] -translate-y-1/2 z-40 w-11 h-11 rounded-full exl-glass items-center justify-center exl-press"
               >
                 <ChevronRight
-                  size={22}
+                  size={21}
                 />
               </button>
             </>
           )}
 
+          {/* CARD SUCCESSIVA: È GIÀ LÌ SOTTO */}
           {nextBookData && (
-            <div className="absolute inset-x-3 top-3 bottom-0 rounded-[34px] bg-black/5 scale-[0.96] opacity-50" />
+            <motion.div
+              aria-hidden
+              animate={{
+                scale:
+                  0.955 +
+                  dragProgress *
+                    0.035,
+
+                y:
+                  12 -
+                  dragProgress *
+                    8,
+
+                opacity:
+                  0.68 +
+                  dragProgress *
+                    0.22,
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 260,
+                damping: 30,
+              }}
+              className="absolute inset-x-2 top-2 bottom-5 rounded-[34px] overflow-hidden shadow-[0_14px_45px_rgba(0,0,0,0.08)]"
+            >
+              <div className="absolute inset-0 bg-[#ddd7cc]" />
+
+              {nextCover && (
+                <>
+                  <div
+                    className="absolute inset-[-30px] bg-cover bg-center blur-[35px] opacity-55 scale-110"
+                    style={{
+                      backgroundImage:
+                        `url("${nextCover}")`,
+                    }}
+                  />
+
+                  <div className="absolute inset-0 bg-white/45 dark:bg-black/40" />
+                </>
+              )}
+
+              <div className="absolute inset-0 border border-white/40 dark:border-white/10 rounded-[34px]" />
+            </motion.div>
           )}
 
           <AnimatePresence
@@ -599,16 +701,16 @@ export default function ShufflePage() {
             custom={direction}
             mode="popLayout"
           >
-            <motion.div
+            <motion.article
               key={currentBook.id}
               custom={direction}
               initial={{
                 x:
                   direction > 0
-                    ? 70
-                    : -70,
+                    ? 55
+                    : -55,
                 opacity: 0,
-                scale: 0.97,
+                scale: 0.98,
               }}
               animate={{
                 x: 0,
@@ -618,162 +720,402 @@ export default function ShufflePage() {
               exit={{
                 x:
                   direction > 0
-                    ? -120
-                    : 120,
+                    ? -160
+                    : 160,
                 opacity: 0,
                 rotate:
                   direction > 0
-                    ? -3
-                    : 3,
+                    ? -5
+                    : 5,
+                scale: 0.96,
               }}
               transition={{
                 type: 'spring',
-                stiffness: 320,
-                damping: 30,
+                stiffness: 300,
+                damping: 29,
               }}
-              drag="x"
+
+              drag={
+                books.length > 1
+                  ? 'x'
+                  : false
+              }
+
               dragConstraints={{
                 left: 0,
                 right: 0,
               }}
-              dragElastic={0.18}
+
+              dragElastic={0.9}
+
+              dragMomentum={false}
+
+              onDrag={(
+                _,
+                info
+              ) => {
+                const x =
+                  info.offset.x
+
+                setDragX(x)
+
+                const crossed =
+                  Math.abs(x) >
+                  88
+
+                if (
+                  crossed &&
+                  !dragThresholdRef.current
+                ) {
+                  dragThresholdRef.current =
+                    true
+
+                  haptic('medium')
+                }
+
+                if (
+                  Math.abs(x) <
+                  58
+                ) {
+                  dragThresholdRef.current =
+                    false
+                }
+              }}
+
               onDragEnd={(
                 _,
                 info
               ) => {
-                if (
-                  info.offset.x < -80 ||
-                  info.velocity.x < -500
-                ) {
-                  goNext()
+                const shouldNext =
+                  info.offset.x <
+                    -88 ||
+                  info.velocity.x <
+                    -650
+
+                const shouldPrevious =
+                  info.offset.x >
+                    88 ||
+                  info.velocity.x >
+                    650
+
+                dragThresholdRef.current =
+                  false
+
+                setDragX(0)
+
+                if (shouldNext) {
+                  goNext(false)
                   return
                 }
 
                 if (
-                  info.offset.x > 80 ||
-                  info.velocity.x > 500
+                  shouldPrevious
                 ) {
-                  goPrevious()
+                  goPrevious(false)
                 }
               }}
-              className="relative overflow-hidden rounded-[34px] shadow-[0_20px_60px_rgba(0,0,0,0.14)] cursor-grab active:cursor-grabbing"
+
+              style={{
+                rotate:
+                  `${Math.max(
+                    -5,
+                    Math.min(
+                      5,
+                      dragX / 28
+                    )
+                  )}deg`,
+              }}
+
+              className="relative overflow-hidden rounded-[34px] shadow-[0_22px_65px_rgba(0,0,0,0.16)] cursor-grab active:cursor-grabbing touch-pan-y select-none"
             >
 
-              <div className="absolute inset-0 bg-[#ECE6DA]" />
+              {/* ATMOSFERA DALLA COPERTINA */}
+              <div className="absolute inset-0 bg-[#ECE6DA] dark:bg-[#272727]" />
 
+              {cover && (
+                <>
+                  <div
+                    className="absolute inset-[-50px] bg-cover bg-center blur-[42px] scale-110 opacity-[0.58] dark:opacity-[0.42]"
+                    style={{
+                      backgroundImage:
+                        `url("${cover}")`,
+                    }}
+                  />
 
-              <div className="relative p-6">
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-[#f5f1e9]/70 to-[#f5f1e9]/95 dark:from-black/15 dark:via-[#242426]/75 dark:to-[#242426]/95" />
+                </>
+              )}
 
-                <div className="flex justify-center">
+              {!cover && (
+                <>
+                  <div className="absolute -top-20 -right-16 w-64 h-64 rounded-full bg-[#5E7FA3]/20 blur-[65px]" />
+                  <div className="absolute bottom-[-70px] left-[-50px] w-60 h-60 rounded-full bg-[#DDB342]/15 blur-[65px]" />
+                </>
+              )}
 
-                  <div className="w-[58%] max-w-[250px] aspect-[2/3] rounded-[20px] overflow-hidden bg-white/50 shadow-[0_16px_40px_rgba(0,0,0,0.20)]">
+              <div className="absolute inset-0 rounded-[34px] border border-white/45 dark:border-white/10 pointer-events-none" />
 
+              {/* INDICATORI DI SWIPE */}
+              <motion.div
+                aria-hidden
+                animate={{
+                  opacity:
+                    dragX > 18
+                      ? Math.min(
+                          dragX /
+                            100,
+                          0.9
+                        )
+                      : 0,
+
+                  x:
+                    dragX > 18
+                      ? 0
+                      : -8,
+                }}
+                className="absolute left-5 top-5 z-30 rounded-full bg-white/55 dark:bg-black/35 backdrop-blur-xl border border-white/40 dark:border-white/10 px-3 py-1.5 text-[11px] font-semibold"
+              >
+                ← Indietro
+              </motion.div>
+
+              <motion.div
+                aria-hidden
+                animate={{
+                  opacity:
+                    dragX < -18
+                      ? Math.min(
+                          Math.abs(
+                            dragX
+                          ) /
+                            100,
+                          0.9
+                        )
+                      : 0,
+
+                  x:
+                    dragX < -18
+                      ? 0
+                      : 8,
+                }}
+                className="absolute right-5 top-5 z-30 rounded-full bg-white/55 dark:bg-black/35 backdrop-blur-xl border border-white/40 dark:border-white/10 px-3 py-1.5 text-[11px] font-semibold"
+              >
+                Prossimo →
+              </motion.div>
+
+              <div
+                className={`relative ${
+                  hasDescription
+                    ? 'p-5 sm:p-6'
+                    : 'p-5 sm:p-7'
+                }`}
+              >
+
+                {/* COPERTINA */}
+                <motion.div
+                  animate={{
+                    y:
+                      dragX === 0
+                        ? 0
+                        : -2,
+
+                    scale:
+                      dragX === 0
+                        ? 1
+                        : 1.012,
+                  }}
+                  transition={{
+                    type:
+                      'spring',
+                    stiffness:
+                      260,
+                    damping:
+                      28,
+                  }}
+                  className="flex justify-center pt-2"
+                >
+                  <div
+                    className={`${
+                      hasDescription
+                        ? 'w-[52%] max-w-[215px]'
+                        : 'w-[60%] max-w-[245px]'
+                    } aspect-[2/3] rounded-[20px] overflow-hidden bg-white/45 shadow-[0_18px_45px_rgba(0,0,0,0.22)] ring-1 ring-white/30`}
+                  >
                     <BookCover
-                      title={currentBook.title}
-                      authors={currentBook.authors}
-                      coverUrl={cover}
+                      title={
+                        currentBook.title
+                      }
+                      authors={
+                        currentBook.authors
+                      }
+                      coverUrl={
+                        cover
+                      }
                     />
-
                   </div>
+                </motion.div>
 
-                </div>
-
-                <div className="mt-6 text-center">
-
-                  <h2 className="text-[28px] font-bold tracking-[-0.04em] leading-tight">
+                {/* TITOLO */}
+                <div
+                  className={`text-center ${
+                    hasDescription
+                      ? 'mt-5'
+                      : 'mt-6'
+                  }`}
+                >
+                  <h2 className="text-[27px] sm:text-[30px] font-bold tracking-[-0.045em] leading-[1.05]">
                     {currentBook.title}
                   </h2>
 
-                  {currentBook.authors?.[0] && (
-                    <p className="text-[#6e6e73] text-[16px] mt-2">
-                      {currentBook.authors.join(', ')}
+                  {currentBook.subtitle && (
+                    <p className="text-[#636366] dark:text-[#aeaeb2] text-[13px] mt-2 line-clamp-2">
+                      {
+                        currentBook.subtitle
+                      }
                     </p>
                   )}
 
+                  {currentBook.authors?.length ? (
+                    <p className="text-[#59595e] dark:text-[#c7c7cc] text-[15px] font-medium mt-2">
+                      {currentBook.authors.join(
+                        ', '
+                      )}
+                    </p>
+                  ) : null}
                 </div>
 
-                <div className="flex justify-center gap-2 flex-wrap mt-5">
+                {/* METADATI */}
+                <div className="flex justify-center gap-2 flex-wrap mt-4">
 
                   {currentBook.pages && (
-                    <span className="bg-white/65 backdrop-blur-md rounded-full px-3 py-2 text-xs font-medium">
-                      {currentBook.pages} pagine
+                    <span className="bg-white/48 dark:bg-black/25 backdrop-blur-[18px] border border-white/35 dark:border-white/10 rounded-full px-3 py-2 text-[11px] font-semibold">
+                      {currentBook.pages}{' '}
+                      pagine
                     </span>
                   )}
 
-                  <span className="bg-white/65 backdrop-blur-md rounded-full px-3 py-2 text-xs font-medium flex items-center gap-1.5">
-                    <MapPin size={13} />
-                    {location}
+                  <span className="max-w-full bg-white/48 dark:bg-black/25 backdrop-blur-[18px] border border-white/35 dark:border-white/10 rounded-full px-3 py-2 text-[11px] font-semibold flex items-center gap-1.5">
+                    <MapPin
+                      size={12}
+                      className="shrink-0"
+                    />
+
+                    <span className="truncate">
+                      {location}
+                    </span>
                   </span>
 
                 </div>
 
-                {currentBook.description && (
-                  <p className="text-[#3a3a3c] text-[15px] leading-relaxed mt-6 line-clamp-5">
-                    {currentBook.description}
-                  </p>
+                {/* TRAMA SOLO QUANDO ESISTE */}
+                {hasDescription && (
+                  <div className="mt-5 rounded-[22px] bg-white/40 dark:bg-black/20 backdrop-blur-[18px] border border-white/35 dark:border-white/10 px-4 py-4">
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <BookOpen
+                        size={14}
+                        className="text-[#5E7FA3]"
+                      />
+
+                      <span className="text-[11px] uppercase tracking-[0.08em] text-[#8e8e93] font-semibold">
+                        In breve
+                      </span>
+                    </div>
+
+                    <p className="text-[#3a3a3c] dark:text-[#d1d1d6] text-[14px] leading-[1.55] line-clamp-4">
+                      {
+                        currentBook.description
+                      }
+                    </p>
+
+                  </div>
                 )}
 
-                <div className="grid grid-cols-[1fr_auto] gap-3 mt-6">
+                {/* CTA */}
+                <div
+                  className={
+                    hasDescription
+                      ? 'mt-5'
+                      : 'mt-7'
+                  }
+                >
 
                   <button
-                    onPointerDown={(e) =>
-                      e.stopPropagation()
+                    onPointerDown={(
+                      event
+                    ) =>
+                      event
+                        .stopPropagation()
                     }
-                    onClick={saveToRead}
-                    disabled={saving}
-                    className={`rounded-[18px] py-4 px-4 font-semibold flex items-center justify-center gap-2 exl-press ${
+                    onClick={
+                      saveToRead
+                    }
+                    disabled={
+                      saving
+                    }
+                    className={`w-full rounded-[19px] py-4 px-4 font-semibold flex items-center justify-center gap-2 exl-press shadow-[0_8px_24px_rgba(0,0,0,0.12)] ${
                       saved
                         ? 'bg-[#34c759] text-white'
-                        : 'bg-black text-white'
+                        : 'bg-black text-white dark:bg-white dark:text-black'
                     }`}
                   >
-
                     {saved ? (
                       <>
-                        <Check size={19} />
-                        Salvato
+                        <Check
+                          size={19}
+                        />
+                        Salvato tra i libri da leggere
                       </>
                     ) : (
                       <>
-                        <BookmarkPlus size={19} />
-                        Da leggere
+                        <BookmarkPlus
+                          size={19}
+                        />
+                        Aggiungi a “Da leggere”
                       </>
                     )}
-
                   </button>
 
-                  <button
-                    onPointerDown={(e) =>
-                      e.stopPropagation()
+                  <Link
+                    href={`/books/${currentBook.id}`}
+                    onPointerDown={(
+                      event
+                    ) =>
+                      event
+                        .stopPropagation()
                     }
-                    onClick={goNext}
-                    className="w-14 h-14 rounded-[18px] bg-white/70 backdrop-blur-md flex items-center justify-center exl-press"
-                    aria-label="Prossimo libro"
+                    className="mt-2.5 min-h-[44px] flex items-center justify-center gap-1.5 text-[#5E7FA3] dark:text-[#86a6c8] text-[13px] font-semibold exl-press"
                   >
-                    <RefreshCw size={20} />
-                  </button>
+                    Apri scheda
+
+                    <ChevronRight
+                      size={15}
+                    />
+                  </Link>
 
                 </div>
 
-                <Link
-                  href={`/books/${currentBook.id}`}
-                  onPointerDown={(e) =>
-                    e.stopPropagation()
-                  }
-                  className="mt-3 py-3 flex items-center justify-center gap-1 text-[#5E7FA3] text-sm font-semibold"
-                >
-                  Apri scheda
-                  <ChevronRight size={16} />
-                </Link>
-
               </div>
 
-            </motion.div>
+            </motion.article>
           </AnimatePresence>
 
-          <p className="text-center text-[#8e8e93] text-xs mt-5">
-            Scorri ← o → per cambiare libro
-          </p>
+          <div className="mt-4 flex items-center justify-center gap-3 text-[#8e8e93]">
+
+            <div className="w-7 h-px bg-black/10 dark:bg-white/10" />
+
+            <p className="text-[11px]">
+              <span className="md:hidden">
+                Scorri a sinistra o a destra
+              </span>
+
+              <span className="hidden md:inline">
+                Trascina la scheda oppure usa ← →
+              </span>
+            </p>
+
+            <div className="w-7 h-px bg-black/10 dark:bg-white/10" />
+
+          </div>
 
         </section>
 

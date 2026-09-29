@@ -20,6 +20,7 @@ import {
 import {
   haptic,
 } from '@/utils/haptics'
+import GlassDock from '@/components/glass/GlassDock'
 
 export default function BottomNav() {
   const pathname =
@@ -62,7 +63,7 @@ export default function BottomNav() {
               stiffness: 420,
               damping: 32,
             }}
-            className="absolute inset-x-2 top-1 bottom-1 rounded-[20px] bg-black/[0.055] dark:bg-white/[0.09]"
+            className="absolute inset-x-2 top-1 bottom-1 rounded-[20px] bg-white/[0.22] dark:bg-white/[0.08] border border-white/30 dark:border-white/10 backdrop-blur-[14px] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_4px_16px_rgba(0,0,0,0.05)]"
           />
         )}
 
@@ -123,9 +124,11 @@ export default function BottomNav() {
         }}
       >
 
-        <div className="exl-glass-strong max-w-[520px] mx-auto h-[64px] px-3 pointer-events-auto rounded-[30px] border border-white/50 dark:border-white/10 bg-white/[0.76] dark:bg-[#1c1c1e]/[0.76] backdrop-blur-[28px] shadow-[0_10px_35px_rgba(0,0,0,0.14)]">
-
-          <div className="grid grid-cols-5 items-center h-full">
+        <GlassDock
+          className="max-w-[520px] mx-auto pointer-events-auto"
+        >
+          <div className="h-[64px] px-3">
+            <div className="grid grid-cols-5 items-center h-full">
 
             {navItem(
               '/',
@@ -155,7 +158,7 @@ export default function BottomNav() {
                   onClick={() =>
                     haptic('medium')
                   }
-                  className="w-[50px] h-[50px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_8px_20px_rgba(0,0,0,0.20)] exl-press"
+                  className="relative w-[50px] h-[50px] rounded-full bg-black text-white flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.24)] exl-press before:absolute before:inset-[-5px] before:rounded-full before:bg-white/[0.16] before:blur-md before:-z-10"
                 >
                   <ScanBarcode
                     size={27}
@@ -178,9 +181,9 @@ export default function BottomNav() {
               Settings
             )}
 
+            </div>
           </div>
-
-        </div>
+        </GlassDock>
 
       </div>
 

@@ -21,6 +21,10 @@ import {
   Heart,
   Search,
   ArrowUpRight,
+  Plus,
+  Quote,
+  Shuffle,
+  Sparkles,
 } from 'lucide-react'
 
 import { createClient } from '@/utils/supabase/client'
@@ -380,30 +384,42 @@ export default function Home() {
 
   const loanedCount =
     books.filter(
-      (book) => book.status === 'loaned'
+      book =>
+        book.status ===
+        'loaned'
     ).length
 
   const recentBooks =
-    books.slice(0, 8)
+    books.slice(0, 10)
+
+  const featuredBook =
+    recentBooks[0]
+
+  const featuredCover =
+    featuredBook
+      ? (
+          featuredBook.custom_cover_url ||
+          featuredBook.cover_url
+        )
+      : null
 
   return (
     <main className="exl-page">
 
-      <div className="max-w-5xl mx-auto px-5 pt-[calc(20px+env(safe-area-inset-top))] md:pt-10">
+      <div className="max-w-5xl mx-auto px-5 pt-[calc(18px+env(safe-area-inset-top))] md:pt-10 pb-32">
 
-        <header className="flex items-start justify-between gap-4">
+        {/* HEADER */}
+        <header className="flex items-center justify-between gap-4">
 
           <div>
 
-            <h1 className="text-[38px] sm:text-[46px] leading-none font-bold tracking-[-0.045em]">
+            <p className="text-[#8e8e93] text-[12px] uppercase tracking-[0.10em] font-medium">
+              La tua biblioteca
+            </p>
+
+            <h1 className="text-[38px] sm:text-[46px] leading-none font-bold tracking-[-0.05em] mt-1">
               Ex Libris
             </h1>
-
-            <p className="text-[#8e8e93] mt-2">
-              {books.length === 1
-                ? '1 libro'
-                : `${books.length} libri`}
-            </p>
 
           </div>
 
@@ -411,230 +427,518 @@ export default function Home() {
 
         </header>
 
-        <Link
-          href="/catalog"
-          className="exl-glass exl-card mt-7 flex items-center gap-3 px-4 py-4 exl-press"
+
+        {/* HERO */}
+        <motion.section
+          initial={{
+            opacity: 0,
+            y: 8,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.28,
+            ease: [
+              0.22,
+              1,
+              0.36,
+              1,
+            ],
+          }}
+          className="relative overflow-hidden rounded-[32px] mt-7 bg-[#5E7FA3] text-white min-h-[225px] shadow-[0_18px_45px_rgba(0,0,0,0.12)]"
         >
 
-          <Search
-            size={20}
-            className="text-[#8e8e93]"
-          />
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.10] via-transparent to-black/[0.12]" />
 
-          <span className="text-[#8e8e93]">
-            Cerca nella biblioteca
+          <div className="absolute -right-16 -top-20 w-64 h-64 rounded-full bg-white/[0.08]" />
+
+          <div className="relative h-full min-h-[225px] p-6 flex">
+
+            <div className="flex-1 min-w-0 flex flex-col justify-between pr-[116px] sm:pr-[180px]">
+
+              <div>
+
+                <div className="flex items-center gap-2 text-white/70 text-[11px] uppercase tracking-[0.08em]">
+
+                  <BookOpen
+                    size={14}
+                  />
+
+                  Biblioteca personale
+
+                </div>
+
+                <div className="flex items-end gap-2 mt-3">
+
+                  <span className="text-[48px] sm:text-[56px] leading-none font-bold tracking-[-0.06em]">
+                    {books.length}
+                  </span>
+
+                  <span className="text-white/65 text-sm pb-1">
+                    {books.length === 1
+                      ? 'libro'
+                      : 'libri'}
+                  </span>
+
+                </div>
+
+              </div>
+
+              {featuredBook ? (
+                <Link
+                  href={`/books/${featuredBook.id}`}
+                  className="block mt-7 group"
+                >
+
+                  <p className="text-white/55 text-[10px] uppercase tracking-[0.09em]">
+                    Ultimo aggiunto
+                  </p>
+
+                  <div className="flex items-center gap-2 mt-1">
+
+                    <p className="font-semibold leading-tight line-clamp-2 max-w-[260px]">
+                      {featuredBook.title}
+                    </p>
+
+                    <ChevronRight
+                      size={16}
+                      className="text-white/55 shrink-0 transition-transform group-hover:translate-x-0.5"
+                    />
+
+                  </div>
+
+                  {featuredBook.authors?.[0] && (
+                    <p className="text-white/55 text-xs mt-1 truncate">
+                      {featuredBook.authors[0]}
+                    </p>
+                  )}
+
+                </Link>
+              ) : (
+                <Link
+                  href="/add"
+                  className="inline-flex items-center gap-2 mt-7 font-semibold"
+                >
+                  <Plus size={18} />
+                  Aggiungi il primo libro
+                </Link>
+              )}
+
+            </div>
+
+
+            {featuredBook && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  x: 16,
+                  rotate: 3,
+                }}
+                animate={{
+                  opacity: 1,
+                  x: 0,
+                  rotate: 2,
+                }}
+                transition={{
+                  delay: 0.05,
+                  duration: 0.35,
+                  ease: [
+                    0.22,
+                    1,
+                    0.36,
+                    1,
+                  ],
+                }}
+                className="absolute right-[-4px] sm:right-7 top-7 w-[116px] sm:w-[142px] aspect-[2/3] rounded-[15px] overflow-hidden shadow-[0_18px_38px_rgba(0,0,0,0.30)] ring-1 ring-white/20 transform-gpu"
+              >
+                <BookCover
+                  title={
+                    featuredBook.title
+                  }
+                  authors={
+                    featuredBook.authors
+                  }
+                  coverUrl={
+                    featuredCover
+                  }
+                  priority
+                />
+              </motion.div>
+            )}
+
+          </div>
+
+        </motion.section>
+
+
+        {/* SEARCH */}
+        <Link
+          href="/catalog"
+          className="exl-glass mt-4 h-[58px] rounded-[22px] flex items-center gap-3 px-4 exl-press"
+        >
+
+          <div className="w-9 h-9 rounded-[12px] bg-black/[0.045] dark:bg-white/[0.08] flex items-center justify-center shrink-0">
+            <Search
+              size={18}
+              className="text-[#5E7FA3]"
+            />
+          </div>
+
+          <span className="text-[#8e8e93] flex-1">
+            Cerca titolo, autore, ISBN…
           </span>
+
+          <ChevronRight
+            size={17}
+            className="text-[#c7c7cc]"
+          />
 
         </Link>
 
-        <section className="grid grid-cols-2 gap-3 mt-5">
 
+        {/* AZIONI RAPIDE */}
+        <section className="mt-7">
+
+          <div className="flex items-center justify-between px-1 mb-3">
+
+            <h2 className="text-[19px] font-bold tracking-[-0.025em]">
+              Azioni rapide
+            </h2>
+
+          </div>
+
+          <div className="grid grid-cols-4 gap-2">
+
+            <HomeQuickAction
+              href="/add"
+              label="Aggiungi"
+              icon={Plus}
+            />
+
+            <HomeQuickAction
+              href="/shuffle"
+              label="Shuffle"
+              icon={Shuffle}
+            />
+
+            <HomeQuickAction
+              href="/citations"
+              label="Citazioni"
+              icon={Quote}
+            />
+
+            <HomeQuickAction
+              href="/loans"
+              label="Prestiti"
+              icon={ArrowUpRight}
+              badge={
+                loanedCount > 0
+                  ? loanedCount
+                  : undefined
+              }
+            />
+
+          </div>
+
+        </section>
+
+
+        {/* DISCOVERY / SHUFFLE */}
+        {books.length > 1 && (
           <motion.div
-            initial={{ y: 5, scale: 0.995 }}
-            animate={{ y: 0, scale: 1 }}
-            transition={{
-              duration: 0.22,
-              ease: [0.22, 1, 0.36, 1],
+            whileTap={{
+              scale: 0.985,
             }}
-            className="col-span-2"
+            className="mt-7"
           >
-          <Link
-            href="/catalog"
-            className="min-h-[165px] rounded-[28px] p-5 text-white flex flex-col justify-between exl-press shadow-sm"
-            style={{
-              backgroundColor: '#5E7FA3',
-            }}
-          >
+            <Link
+              href="/shuffle"
+              className="relative overflow-hidden rounded-[28px] min-h-[150px] bg-[#171719] text-white p-5 flex items-end exl-press"
+            >
 
-            <div className="flex justify-between items-start">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#5E7FA3]/55 via-transparent to-[#DDB342]/20" />
 
-              <BookOpen
-                size={29}
-                strokeWidth={1.9}
-              />
+              <div className="absolute right-4 top-3 opacity-[0.12]">
+                <Shuffle
+                  size={112}
+                  strokeWidth={1.3}
+                />
+              </div>
 
-              <span className="text-[34px] leading-none font-bold tracking-[-0.04em]">
-                {books.length}
-              </span>
+              <div className="relative w-full">
 
-            </div>
+                <div className="flex items-center gap-2 text-white/60 text-[11px] uppercase tracking-[0.08em]">
+                  <Sparkles
+                    size={14}
+                  />
+                  Lasciati sorprendere
+                </div>
 
-            <div>
+                <div className="flex items-end justify-between gap-5 mt-3">
 
-              <p className="text-[25px] font-bold tracking-[-0.03em]">
-                Biblioteca
-              </p>
+                  <div>
+                    <h2 className="text-[25px] font-bold tracking-[-0.035em] leading-tight">
+                      Cosa leggo adesso?
+                    </h2>
 
-              <p className="text-white/70 text-sm mt-1">
-                Tutti i tuoi libri
-              </p>
+                    <p className="text-white/55 text-sm mt-1">
+                      Scorri la tua biblioteca e trova il prossimo libro.
+                    </p>
+                  </div>
 
-            </div>
+                  <div className="w-10 h-10 rounded-full bg-white/12 flex items-center justify-center shrink-0">
+                    <ChevronRight
+                      size={20}
+                    />
+                  </div>
 
-          </Link>
+                </div>
+
+              </div>
+
+            </Link>
           </motion.div>
+        )}
 
-          <motion.div
-            initial={{ y: 5, scale: 0.995 }}
-            animate={{ y: 0, scale: 1 }}
-            transition={{
-              duration: 0.22,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
+
+        {/* RECENTI */}
+        {recentBooks.length > 0 && (
+          <section className="mt-9">
+
+            <div className="flex items-center justify-between mb-4">
+
+              <div>
+                <p className="text-[#8e8e93] text-[11px] uppercase tracking-[0.08em]">
+                  Biblioteca
+                </p>
+
+                <h2 className="text-[22px] font-bold tracking-[-0.03em] mt-0.5">
+                  Ultimi aggiunti
+                </h2>
+              </div>
+
+              <Link
+                href="/catalog"
+                className="h-9 px-3 rounded-full bg-black/[0.045] dark:bg-white/[0.08] text-[13px] font-semibold flex items-center gap-1 exl-press"
+              >
+                Tutti
+                <ChevronRight
+                  size={15}
+                />
+              </Link>
+
+            </div>
+
+            <div className="flex gap-4 overflow-x-auto exl-scrollbar-none -mx-5 px-5 pb-3">
+
+              {recentBooks.map(
+                (
+                  book,
+                  index
+                ) => {
+                  const cover =
+                    book.custom_cover_url ||
+                    book.cover_url
+
+                  return (
+                    <motion.div
+                      key={
+                        book.id
+                      }
+                      initial={{
+                        opacity: 0,
+                        x: 8,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        x: 0,
+                      }}
+                      transition={{
+                        duration:
+                          0.22,
+                        delay:
+                          Math.min(
+                            index *
+                              0.025,
+                            0.12
+                          ),
+                      }}
+                      className="w-[132px] shrink-0"
+                    >
+
+                      <Link
+                        href={`/books/${book.id}`}
+                        className="block exl-press"
+                      >
+
+                        <div className="aspect-[2/3] rounded-[17px] overflow-hidden bg-[#d1d1d6] shadow-[0_10px_25px_rgba(0,0,0,0.10)]">
+
+                          <BookCover
+                            title={
+                              book.title
+                            }
+                            authors={
+                              book.authors
+                            }
+                            coverUrl={
+                              cover
+                            }
+                            priority={
+                              index <
+                              3
+                            }
+                          />
+
+                        </div>
+
+                        <p className="font-semibold text-[14px] leading-tight mt-3 line-clamp-2">
+                          {book.title}
+                        </p>
+
+                        {book.authors?.[0] && (
+                          <p className="text-[#8e8e93] text-[12px] mt-1 truncate">
+                            {
+                              book
+                                .authors[0]
+                            }
+                          </p>
+                        )}
+
+                      </Link>
+
+                    </motion.div>
+                  )
+                }
+              )}
+
+            </div>
+
+          </section>
+        )}
+
+
+        {/* SECONDARY INFO */}
+        <section className="grid grid-cols-2 gap-3 mt-6">
+
           <Link
             href="/favorites"
-            className="min-h-[135px] rounded-[25px] p-4 text-white flex flex-col justify-between exl-press shadow-sm"
-            style={{
-              backgroundColor: '#DDB342',
-            }}
+            className="exl-glass rounded-[24px] p-4 min-h-[118px] flex flex-col justify-between exl-press"
           >
 
-            <div className="flex justify-between items-start">
+            <div className="flex items-start justify-between">
 
-              <Heart
-                size={24}
-                strokeWidth={2}
-              />
+              <div className="w-9 h-9 rounded-[12px] bg-[#DDB342]/15 flex items-center justify-center">
+                <Heart
+                  size={18}
+                  className="text-[#DDB342]"
+                  fill="currentColor"
+                />
+              </div>
 
-              <span className="text-[27px] leading-none font-bold">
+              <span className="text-[24px] font-bold tracking-[-0.04em]">
                 {favoriteCount}
               </span>
 
             </div>
 
-            <p className="text-[17px] font-semibold">
-              Preferiti
-            </p>
+            <div>
+              <p className="font-semibold">
+                Preferiti
+              </p>
+
+              <p className="text-[#8e8e93] text-xs mt-0.5">
+                La tua selezione
+              </p>
+            </div>
 
           </Link>
-          </motion.div>
 
-          <motion.div
-            initial={{ y: 5, scale: 0.995 }}
-            animate={{ y: 0, scale: 1 }}
-            transition={{
-              duration: 0.22,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
+
           <Link
             href="/loans"
-            className="min-h-[135px] rounded-[25px] p-4 text-white flex flex-col justify-between exl-press shadow-sm"
-            style={{
-              backgroundColor: '#C76955',
-            }}
+            className="exl-glass rounded-[24px] p-4 min-h-[118px] flex flex-col justify-between exl-press"
           >
 
-            <div className="flex justify-between items-start">
+            <div className="flex items-start justify-between">
 
-              <ArrowUpRight
-                size={25}
-                strokeWidth={2}
-              />
+              <div className="w-9 h-9 rounded-[12px] bg-[#C76955]/15 flex items-center justify-center">
+                <ArrowUpRight
+                  size={18}
+                  className="text-[#C76955]"
+                />
+              </div>
 
-              <span className="text-[27px] leading-none font-bold">
+              <span className="text-[24px] font-bold tracking-[-0.04em]">
                 {loanedCount}
               </span>
 
             </div>
 
-            <p className="text-[17px] font-semibold">
-              Prestiti
-            </p>
+            <div>
+              <p className="font-semibold">
+                Prestiti
+              </p>
+
+              <p className="text-[#8e8e93] text-xs mt-0.5">
+                {loanedCount
+                  ? 'Libri fuori casa'
+                  : 'Tutto a casa'}
+              </p>
+            </div>
 
           </Link>
-          </motion.div>
-
-        </section>
-
-        <section className="mt-9">
-
-          <div className="flex items-center justify-between mb-4">
-
-            <h2 className="text-[22px] font-bold tracking-[-0.025em]">
-              Ultimi aggiunti
-            </h2>
-
-            <Link
-              href="/catalog"
-              className="text-[15px] text-[#5E7FA3] font-medium flex items-center"
-            >
-              Tutti
-              <ChevronRight size={17} />
-            </Link>
-
-          </div>
-
-          <div className="flex gap-4 overflow-x-auto exl-scrollbar-none -mx-5 px-5 pb-4">
-
-            {recentBooks.map((book, index) => {
-
-              const cover =
-                book.custom_cover_url ||
-                book.cover_url
-
-              return (
-                <motion.div
-                  key={book.id}
-                  initial={{
-                    x: 5,
-                    scale: 0.99,
-                  }}
-                  animate={{
-                    x: 0,
-                    scale: 1,
-                  }}
-                  transition={{
-                    duration: 0.20,
-                    ease: [
-                      0.22,
-                      1,
-                      0.36,
-                      1,
-                    ],
-                  }}
-                  className="w-[128px] shrink-0"
-                >
-                <Link
-                  href={`/books/${book.id}`}
-                  className="block exl-press"
-                >
-
-                  <div className="aspect-[2/3] rounded-[16px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
-
-                    <BookCover
-                      title={book.title}
-                      authors={book.authors}
-                      coverUrl={cover}
-                      priority={
-                        index < 3
-                      }
-                    />
-
-                  </div>
-
-                  <p className="font-semibold text-[14px] leading-tight mt-3 line-clamp-2">
-                    {book.title}
-                  </p>
-
-                  {book.authors?.[0] && (
-                    <p className="text-[#8e8e93] text-[12px] mt-1 truncate">
-                      {book.authors[0]}
-                    </p>
-                  )}
-
-                </Link>
-                </motion.div>
-              )
-            })}
-
-          </div>
 
         </section>
 
       </div>
 
     </main>
+  )
+}
+
+
+function HomeQuickAction({
+  href,
+  label,
+  icon: Icon,
+  badge,
+}: {
+  href: string
+  label: string
+  icon: typeof BookOpen
+  badge?: number
+}) {
+  return (
+    <motion.div
+      whileTap={{
+        scale: 0.93,
+      }}
+    >
+      <Link
+        href={href}
+        className="relative exl-glass rounded-[20px] min-h-[82px] px-2 py-3 flex flex-col items-center justify-center gap-2 text-center exl-press"
+      >
+
+        <div className="w-9 h-9 rounded-[12px] bg-black/[0.045] dark:bg-white/[0.08] flex items-center justify-center">
+          <Icon
+            size={18}
+            strokeWidth={2}
+          />
+        </div>
+
+        <span className="text-[11px] font-semibold">
+          {label}
+        </span>
+
+        {badge !== undefined && (
+          <span className="absolute top-2 right-2 min-w-5 h-5 px-1 rounded-full bg-[#C76955] text-white text-[10px] font-bold flex items-center justify-center">
+            {badge}
+          </span>
+        )}
+
+      </Link>
+    </motion.div>
   )
 }

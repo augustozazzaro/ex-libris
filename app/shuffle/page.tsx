@@ -25,6 +25,8 @@ import {
 import {
   AnimatePresence,
   motion,
+  useMotionValue,
+  useTransform,
 } from 'framer-motion'
 
 import { createClient } from '@/utils/supabase/client'
@@ -88,8 +90,9 @@ export default function ShufflePage() {
   const [error, setError] =
     useState('')
 
-  const [dragX, setDragX] =
-    useState(0)
+  const dragX =
+    useMotionValue(0)
+
 
   const dragThresholdRef =
     useRef(false)
@@ -317,6 +320,84 @@ export default function ShufflePage() {
             books.length
         ]
       : undefined
+
+
+  /*
+   * Tutte queste animazioni avvengono
+   * fuori dal ciclo di rendering React.
+   *
+   * Risultato: la card segue il dito
+   * direttamente sul layer composito.
+   */
+  const cardRotate =
+    useTransform(
+      dragX,
+      [-160, 0, 160],
+      [-5, 0, 5]
+    )
+
+  const nextScale =
+    useTransform(
+      dragX,
+      [-140, 0, 140],
+      [0.99, 0.955, 0.99]
+    )
+
+  const nextY =
+    useTransform(
+      dragX,
+      [-140, 0, 140],
+      [4, 12, 4]
+    )
+
+  const nextOpacity =
+    useTransform(
+      dragX,
+      [-140, 0, 140],
+      [0.9, 0.68, 0.9]
+    )
+
+  const previousOpacity =
+    useTransform(
+      dragX,
+      [0, 18, 100],
+      [0, 0, 0.9]
+    )
+
+  const previousX =
+    useTransform(
+      dragX,
+      [0, 18, 100],
+      [-8, -8, 0]
+    )
+
+  const nextOpacityHint =
+    useTransform(
+      dragX,
+      [-100, -18, 0],
+      [0.9, 0, 0]
+    )
+
+  const nextXHint =
+    useTransform(
+      dragX,
+      [-100, -18, 0],
+      [0, 8, 8]
+    )
+
+  const coverScale =
+    useTransform(
+      dragX,
+      [-140, 0, 140],
+      [1.012, 1, 1.012]
+    )
+
+  const coverY =
+    useTransform(
+      dragX,
+      [-140, 0, 140],
+      [-2, 0, -2]
+    )
 
   const locationMap =
     useMemo(() => {
@@ -554,12 +635,6 @@ export default function ShufflePage() {
         )
       : null
 
-  const dragProgress =
-    Math.min(
-      Math.abs(dragX) / 140,
-      1
-    )
-
   return (
     <main className="exl-page overflow-x-hidden">
 
@@ -653,26 +728,15 @@ export default function ShufflePage() {
           {nextBookData && (
             <motion.div
               aria-hidden
-              animate={{
+              style={{
                 scale:
-                  0.955 +
-                  dragProgress *
-                    0.035,
-
+                  nextScale,
                 y:
-                  12 -
-                  dragProgress *
-                    8,
-
+                  nextY,
                 opacity:
-                  0.68 +
-                  dragProgress *
-                    0.22,
-              }}
-              transition={{
-                type: 'spring',
-                stiffness: 260,
-                damping: 30,
+                  nextOpacity,
+                willChange:
+                  'transform, opacity',
               }}
               className="absolute inset-x-2 top-2 bottom-5 rounded-[34px] overflow-hidden shadow-[0_14px_45px_rgba(0,0,0,0.08)]"
             >
@@ -757,7 +821,7 @@ export default function ShufflePage() {
                 const x =
                   info.offset.x
 
-                setDragX(x)
+                dragX.set(x)
 
                 const crossed =
                   Math.abs(x) >
@@ -801,7 +865,7 @@ export default function ShufflePage() {
                 dragThresholdRef.current =
                   false
 
-                setDragX(0)
+                dragX.set(0)
 
                 if (shouldNext) {
                   goNext(false)
@@ -817,16 +881,12 @@ export default function ShufflePage() {
 
               style={{
                 rotate:
-                  `${Math.max(
-                    -5,
-                    Math.min(
-                      5,
-                      dragX / 28
-                    )
-                  )}deg`,
+                  cardRotate,
+                willChange:
+                  'transform',
               }}
 
-              className="relative overflow-hidden rounded-[34px] shadow-[0_22px_65px_rgba(0,0,0,0.16)] cursor-grab active:cursor-grabbing touch-pan-y select-none"
+              className="relative overflow-hidden rounded-[34px] shadow-[0_18px_50px_rgba(0,0,0,0.14)] cursor-grab active:cursor-grabbing touch-pan-y select-none transform-gpu [backface-visibility:hidden] [contain:paint]"
             >
 
               {/* ATMOSFERA DALLA COPERTINA */}
@@ -858,46 +918,26 @@ export default function ShufflePage() {
               {/* INDICATORI DI SWIPE */}
               <motion.div
                 aria-hidden
-                animate={{
+                style={{
                   opacity:
-                    dragX > 18
-                      ? Math.min(
-                          dragX /
-                            100,
-                          0.9
-                        )
-                      : 0,
-
+                    previousOpacity,
                   x:
-                    dragX > 18
-                      ? 0
-                      : -8,
+                    previousX,
                 }}
-                className="absolute left-5 top-5 z-30 rounded-full bg-white/55 dark:bg-black/35 backdrop-blur-xl border border-white/40 dark:border-white/10 px-3 py-1.5 text-[11px] font-semibold"
+                className="absolute left-5 top-5 z-30 rounded-full bg-white/55 dark:bg-black/35 backdrop-blur-md border border-white/40 dark:border-white/10 px-3 py-1.5 text-[11px] font-semibold"
               >
                 ← Indietro
               </motion.div>
 
               <motion.div
                 aria-hidden
-                animate={{
+                style={{
                   opacity:
-                    dragX < -18
-                      ? Math.min(
-                          Math.abs(
-                            dragX
-                          ) /
-                            100,
-                          0.9
-                        )
-                      : 0,
-
+                    nextOpacityHint,
                   x:
-                    dragX < -18
-                      ? 0
-                      : 8,
+                    nextXHint,
                 }}
-                className="absolute right-5 top-5 z-30 rounded-full bg-white/55 dark:bg-black/35 backdrop-blur-xl border border-white/40 dark:border-white/10 px-3 py-1.5 text-[11px] font-semibold"
+                className="absolute right-5 top-5 z-30 rounded-full bg-white/55 dark:bg-black/35 backdrop-blur-md border border-white/40 dark:border-white/10 px-3 py-1.5 text-[11px] font-semibold"
               >
                 Prossimo →
               </motion.div>
@@ -912,24 +952,13 @@ export default function ShufflePage() {
 
                 {/* COPERTINA */}
                 <motion.div
-                  animate={{
+                  style={{
                     y:
-                      dragX === 0
-                        ? 0
-                        : -2,
-
+                      coverY,
                     scale:
-                      dragX === 0
-                        ? 1
-                        : 1.012,
-                  }}
-                  transition={{
-                    type:
-                      'spring',
-                    stiffness:
-                      260,
-                    damping:
-                      28,
+                      coverScale,
+                    willChange:
+                      'transform',
                   }}
                   className="flex justify-center pt-2"
                 >
@@ -950,6 +979,7 @@ export default function ShufflePage() {
                       coverUrl={
                         cover
                       }
+                      priority
                     />
                   </div>
                 </motion.div>
@@ -987,13 +1017,13 @@ export default function ShufflePage() {
                 <div className="flex justify-center gap-2 flex-wrap mt-4">
 
                   {currentBook.pages && (
-                    <span className="bg-white/48 dark:bg-black/25 backdrop-blur-[18px] border border-white/35 dark:border-white/10 rounded-full px-3 py-2 text-[11px] font-semibold">
+                    <span className="bg-white/48 dark:bg-black/25 backdrop-blur-md border border-white/35 dark:border-white/10 rounded-full px-3 py-2 text-[11px] font-semibold">
                       {currentBook.pages}{' '}
                       pagine
                     </span>
                   )}
 
-                  <span className="max-w-full bg-white/48 dark:bg-black/25 backdrop-blur-[18px] border border-white/35 dark:border-white/10 rounded-full px-3 py-2 text-[11px] font-semibold flex items-center gap-1.5">
+                  <span className="max-w-full bg-white/48 dark:bg-black/25 backdrop-blur-md border border-white/35 dark:border-white/10 rounded-full px-3 py-2 text-[11px] font-semibold flex items-center gap-1.5">
                     <MapPin
                       size={12}
                       className="shrink-0"
@@ -1008,7 +1038,7 @@ export default function ShufflePage() {
 
                 {/* TRAMA SOLO QUANDO ESISTE */}
                 {hasDescription && (
-                  <div className="mt-5 rounded-[22px] bg-white/40 dark:bg-black/20 backdrop-blur-[18px] border border-white/35 dark:border-white/10 px-4 py-4">
+                  <div className="mt-5 rounded-[22px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/35 dark:border-white/10 px-4 py-4">
 
                     <div className="flex items-center gap-2 mb-2">
                       <BookOpen

@@ -814,89 +814,19 @@ export default function ShufflePage() {
             </>
           )}
 
-          {/* CARD SUCCESSIVA: già pronta sotto quella corrente */}
+          {/* CARD SUCCESSIVA: solo profondità, niente contenuto visibile */}
           {nextBookData && (
             <motion.div
               aria-hidden
               style={{
-                scale:
-                  nextCardScale,
-
-                y:
-                  nextCardY,
-
-                opacity:
-                  nextCardOpacity,
-
+                scale: nextCardScale,
+                y: nextCardY,
+                opacity: nextCardOpacity,
                 willChange:
                   'transform, opacity',
               }}
-              className="absolute inset-x-2 top-2 bottom-5 rounded-[34px] overflow-hidden bg-[#ECE6DA] dark:bg-[#272727] shadow-[0_13px_38px_rgba(0,0,0,0.09)] transform-gpu"
-            >
-
-              {nextCover && (
-                <>
-                  <div
-                    className="absolute inset-[-35px] bg-cover bg-center blur-[34px] opacity-[0.40] dark:opacity-[0.30] scale-110"
-                    style={{
-                      backgroundImage:
-                        `url("${nextCover}")`,
-                    }}
-                  />
-
-                  <div className="absolute inset-0 bg-white/58 dark:bg-black/46" />
-                </>
-              )}
-
-              <div className="absolute inset-0 border border-white/40 dark:border-white/10 rounded-[34px]" />
-
-              <div className="relative h-full p-6 flex flex-col items-center justify-center">
-
-                <div className="w-[48%] max-w-[195px] aspect-[2/3] rounded-[18px] overflow-hidden shadow-[0_13px_32px_rgba(0,0,0,0.18)] bg-white/40">
-
-                  <BookCover
-                    title={
-                      nextBookData.title
-                    }
-                    authors={
-                      nextBookData.authors
-                    }
-                    coverUrl={
-                      nextCover
-                    }
-                    priority
-                  />
-
-                </div>
-
-                <p className="font-bold text-[20px] tracking-[-0.035em] text-center line-clamp-2 mt-4">
-                  {nextBookData.title}
-                </p>
-
-                {nextBookData.authors?.[0] && (
-                  <p className="text-[#6e6e73] dark:text-[#aeaeb2] text-[12px] mt-1 truncate max-w-[80%]">
-                    {nextBookData.authors[0]}
-                  </p>
-                )}
-
-                {nextLocation && (
-                  <div className="text-[#8e8e93] text-[10px] mt-3 flex items-center gap-1 max-w-[80%]">
-
-                    <MapPin
-                      size={10}
-                      className="shrink-0"
-                    />
-
-                    <span className="truncate">
-                      {nextLocation}
-                    </span>
-
-                  </div>
-                )}
-
-              </div>
-
-            </motion.div>
+              className="absolute inset-x-2 top-2 bottom-5 rounded-[34px] overflow-hidden bg-black/[0.035] dark:bg-white/[0.06] border border-white/35 dark:border-white/10 shadow-[0_10px_28px_rgba(0,0,0,0.06)] transform-gpu"
+            />
           )}
 
           <AnimatePresence
@@ -910,10 +840,10 @@ export default function ShufflePage() {
               initial={{
                 x:
                   direction > 0
-                    ? 18
-                    : -18,
+                    ? 6
+                    : -6,
                 opacity: 1,
-                scale: 0.992,
+                scale: 0.998,
               }}
               animate={{
                 x: 0,
@@ -930,8 +860,9 @@ export default function ShufflePage() {
               }}
               transition={{
                 type: 'spring',
-                stiffness: 300,
-                damping: 29,
+                stiffness: 430,
+                damping: 36,
+                mass: 0.55,
               }}
 
               drag={

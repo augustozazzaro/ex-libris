@@ -730,7 +730,7 @@ export default function AddBookPage() {
 
             /*
               Se uno dei due possiede un ISBN
-              e l'altro no, non presumiamo che
+              e l&apos;altro no, non presumiamo che
               siano la stessa edizione.
             */
             if (
@@ -1236,7 +1236,7 @@ export default function AddBookPage() {
           <section className="mt-7">
 
             <p className="text-[#8e8e93] text-sm mb-3">
-              Scegli l'edizione corretta
+              Scegli l&apos;edizione corretta
             </p>
 
             <div className="space-y-3">

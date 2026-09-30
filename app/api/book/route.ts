@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import {
+  cleanBookTitle,
+  cleanPersonName,
+  cleanPeople,
+} from '@/utils/book-metadata'
+
 type Candidate = {
   source: string
 
@@ -31,8 +37,12 @@ type Candidate = {
   isbn13?: string
 }
 
-function cleanISBN(value: string) {
-  return value
+function cleanISBN(
+  value?: string | null
+) {
+  return (
+    value ?? ''
+  )
     .toUpperCase()
     .replace(/[^0-9X]/g, '')
 }
@@ -71,16 +81,11 @@ function cleanSbnText(
 function cleanContributorName(
   value: unknown
 ) {
-  return cleanSbnText(value)
-    .replace(
-      /^\[[^\]]+\]\s*/,
-      ''
+  return cleanPersonName(
+    cleanSbnText(
+      value
     )
-    .replace(
-      /\s+/g,
-      ' '
-    )
-    .trim()
+  )
 }
 
 function uniqueStrings(
@@ -491,9 +496,12 @@ async function sbn(
         ''
 
       const title =
-        cleanSbnText(rawTitle)
-          .split(' / ')[0]
-          .trim()
+        cleanBookTitle(
+          cleanSbnText(
+            rawTitle
+          )
+            .split(' / ')[0]
+        )
 
       const mainAuthor =
         typeof record.autorePrincipale === 'string'
@@ -506,11 +514,26 @@ async function sbn(
             )
 
       const authors =
-        mainAuthor
-          ? [mainAuthor]
-          : Array.isArray(source.nomi)
-            ? source.nomi.slice(0, 5)
-            : []
+        cleanPeople(
+          mainAuthor
+            ? [mainAuthor]
+            : Array.isArray(
+                source.nomi
+              )
+              ? source.nomi
+                  .slice(
+                    0,
+                    5
+                  )
+                  .filter(
+                    (
+                      value: unknown
+                    ): value is string =>
+                      typeof value ===
+                      'string'
+                  )
+              : []
+        )
 
       const publication =
         cleanSbnText(
@@ -795,18 +818,23 @@ async function googleBooks(
         item.volumeInfo ?? {}
 
       const identifiers =
-        info.industryIdentifiers ??
-        []
+        (
+          info.industryIdentifiers ??
+          []
+        ) as Array<{
+          type?: string
+          identifier?: string
+        }>
 
       const found13 =
         identifiers.find(
-          (x: any) =>
+          (x) =>
             x.type === 'ISBN_13'
         )?.identifier
 
       const found10 =
         identifiers.find(
-          (x: any) =>
+          (x) =>
             x.type === 'ISBN_10'
         )?.identifier
 
@@ -912,7 +940,9 @@ async function openLibrary(
       continue
     }
 
-    let work: any = null
+    let work:
+      Record<string, unknown> | null =
+        null
 
     const workKey =
       edition.works?.[0]?.key
@@ -1247,17 +1277,49 @@ async function crossref(
   const data =
     await safeFetch(url)
 
+  type CrossrefAuthor = {
+    given?: string
+    family?: string
+  }
+
+  type CrossrefItem = {
+    author?: CrossrefAuthor[]
+    created?: {
+      'date-time'?: string
+      timestamp?: number
+      'date-parts'?: number[][]
+    }
+    abstract?: string
+    title?: string[]
+    subtitle?: string[]
+    publisher?: string
+    published?: {
+      'date-parts'?: number[][]
+    }
+    publishedPrint?: {
+      'date-parts'?: number[][]
+    }
+    publishedOnline?: {
+      'date-parts'?: number[][]
+    }
+    ISBN?: string[]
+    type?: string
+  }
+
   const items =
-    data?.message?.items ?? []
+    (
+      data?.message?.items ??
+      []
+    ) as CrossrefItem[]
 
   return items.map(
-    (item: any) => {
+    (item) => {
       const authors =
         (
           item.author ?? []
         )
           .map(
-            (author: any) =>
+            (author) =>
               [
                 author.given,
                 author.family,

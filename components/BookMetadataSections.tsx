@@ -210,7 +210,7 @@ export default function BookMetadataSections({
                 />
 
                 <p className="font-semibold text-[15px]">
-                  Note sull'edizione
+                  Note sull&apos;edizione
                 </p>
 
               </div>

@@ -21,7 +21,6 @@ import {
   MapPin,
   BookOpen,
   Trash2,
-  MoreHorizontal,
   Heart,
 } from 'lucide-react'
 
@@ -51,6 +50,12 @@ import {
   buildLocationPath,
   LocationItem,
 } from '@/utils/location-path'
+
+import {
+  cleanBookTitle,
+  cleanPeople,
+  cleanPeopleInput,
+} from '@/utils/book-metadata'
 
 type Book = {
   id: string
@@ -763,30 +768,26 @@ export default function BookPage() {
     const peopleArray = (
       value: string
     ) =>
-      value
-        .split(',')
-        .map(
-          item =>
-            item.trim()
-        )
-        .filter(Boolean)
+      cleanPeopleInput(
+        value
+      )
 
     const authorsArray =
-      authors
-        .split(',')
-        .map(
-          (item) =>
-            item.trim()
-        )
-        .filter(Boolean)
+      cleanPeopleInput(
+        authors
+      )
 
     const { error } =
       await supabase
         .from('books')
         .update({
           title:
-            title.trim() ||
-            book.title,
+            cleanBookTitle(
+              title
+            ) ||
+            cleanBookTitle(
+              book.title
+            ),
 
           subtitle:
             subtitle.trim() ||
@@ -991,8 +992,8 @@ export default function BookPage() {
               }
               className="exl-glass w-11 h-11 rounded-full flex items-center justify-center exl-press"
             >
-              <MoreHorizontal
-                size={22}
+              <Pencil
+                size={19}
               />
             </button>
 
@@ -1004,9 +1005,17 @@ export default function BookPage() {
           <>
 
             <BookDetailHero
-              title={book.title}
+              title={
+                cleanBookTitle(
+                  book.title
+                )
+              }
               subtitle={book.subtitle}
-              authors={book.authors}
+              authors={
+                cleanPeople(
+                  book.authors
+                )
+              }
               publisher={book.publisher}
               publicationYear={
                 book.publication_year
@@ -1198,7 +1207,7 @@ export default function BookPage() {
                     </p>
 
                     <p className="text-[#8e8e93] text-xs leading-relaxed mt-1">
-                      Puoi fotografare la tua copia o scegliere un'immagine dalla libreria.
+                      Puoi fotografare la tua copia o scegliere un&apos;immagine dalla libreria.
                     </p>
 
                   </div>

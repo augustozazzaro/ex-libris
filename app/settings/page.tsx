@@ -61,7 +61,7 @@ export default function SettingsPage() {
             Le posizioni definiscono la struttura fisica
             della biblioteca. Normalmente vengono configurate
             una volta e modificate solo quando cambia
-            l'organizzazione dei libri.
+            l&apos;organizzazione dei libri.
           </p>
 
         </div>

@@ -31,6 +31,9 @@ import {
   invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
+import {
+  cleanBookTitle,
+} from '@/utils/book-metadata'
 
 type Location = {
   id: string
@@ -907,7 +910,7 @@ export default function LocationsPage() {
                           <div className="w-10 h-14 bg-[#d1d1d6] rounded-lg overflow-hidden shrink-0">
 
                             <BookCover
-                              title={book.title}
+                              title={cleanBookTitle(book.title)}
                               authors={book.authors}
                               coverUrl={cover}
                             />

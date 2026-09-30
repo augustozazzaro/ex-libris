@@ -39,6 +39,9 @@ import {
   writeCache,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
+import {
+  cleanBookTitle,
+} from '@/utils/book-metadata'
 import ProfileButton from '@/components/ProfileButton'
 
 type Book = {
@@ -1490,7 +1493,7 @@ export default function Home() {
                         </div>
 
                         <p className="font-semibold text-[14px] leading-tight mt-3 line-clamp-2">
-                          {book.title}
+                          {cleanBookTitle(book.title)}
                         </p>
 
                         {book.authors?.[0] && (

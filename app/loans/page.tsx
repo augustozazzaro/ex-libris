@@ -26,6 +26,9 @@ import {
   invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
+import {
+  cleanBookTitle,
+} from '@/utils/book-metadata'
 
 type Book = {
   id: string
@@ -709,7 +712,7 @@ function LoanCard({
             href={`/books/${book.id}`}
             className="font-semibold line-clamp-2"
           >
-            {book.title}
+            {cleanBookTitle(book.title)}
           </Link>
         ) : (
           <p className="font-semibold">

@@ -33,6 +33,10 @@ import {
 
 import { createClient } from '@/utils/supabase/client'
 import BookCover from '@/components/BookCover'
+import {
+  cleanBookTitle,
+  cleanPeople,
+} from '@/utils/book-metadata'
 
 import {
   haptic,
@@ -1119,7 +1123,7 @@ className="relative overflow-hidden rounded-[34px] shadow-[0_16px_42px_rgba(0,0,
                   >
                     <BookCover
                       title={
-                        currentBook.title
+                        cleanBookTitle(currentBook.title)
                       }
                       authors={
                         currentBook.authors
@@ -1141,7 +1145,7 @@ className="relative overflow-hidden rounded-[34px] shadow-[0_16px_42px_rgba(0,0,
                   }`}
                 >
                   <h2 className="text-[27px] sm:text-[30px] font-bold tracking-[-0.045em] leading-[1.05]">
-                    {currentBook.title}
+                    {cleanBookTitle(currentBook.title)}
                   </h2>
 
                   {currentBook.subtitle && (
@@ -1154,7 +1158,7 @@ className="relative overflow-hidden rounded-[34px] shadow-[0_16px_42px_rgba(0,0,
 
                   {currentBook.authors?.length ? (
                     <p className="text-[#59595e] dark:text-[#c7c7cc] text-[15px] font-medium mt-2">
-                      {currentBook.authors.join(
+                      {cleanPeople(currentBook.authors).join(
                         ', '
                       )}
                     </p>

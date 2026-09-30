@@ -26,6 +26,11 @@ import {
   writeCache,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
+import {
+  cleanBookTitle,
+  cleanPersonName,
+  cleanPeople,
+} from '@/utils/book-metadata'
 
 import {
   buildLocationPath,
@@ -680,7 +685,7 @@ export default function CatalogPage() {
                     <div className="aspect-[2/3] rounded-[18px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
 
                       <BookCover
-                        title={book.title}
+                        title={cleanBookTitle(book.title)}
                         authors={book.authors}
                         coverUrl={cover}
                         priority={
@@ -691,12 +696,12 @@ export default function CatalogPage() {
                     </div>
 
                     <h2 className="font-semibold leading-tight mt-3 line-clamp-2">
-                      {book.title}
+                      {cleanBookTitle(book.title)}
                     </h2>
 
                     {book.authors?.[0] && (
                       <p className="text-[#8e8e93] text-sm mt-1 truncate">
-                        {book.authors[0]}
+                        {cleanPersonName(book.authors[0])}
                       </p>
                     )}
 
@@ -732,7 +737,7 @@ export default function CatalogPage() {
                     <div className="w-14 h-20 rounded-[9px] overflow-hidden bg-[#d1d1d6] shrink-0 shadow-sm">
 
                       <BookCover
-                        title={book.title}
+                        title={cleanBookTitle(book.title)}
                         authors={book.authors}
                         coverUrl={cover}
                         priority={
@@ -745,12 +750,12 @@ export default function CatalogPage() {
                     <div className="min-w-0 flex-1">
 
                       <p className="font-semibold line-clamp-2">
-                        {book.title}
+                        {cleanBookTitle(book.title)}
                       </p>
 
                       {book.authors?.length ? (
                         <p className="text-[#8e8e93] text-sm mt-1 truncate">
-                          {book.authors.join(', ')}
+                          {cleanPeople(book.authors).join(', ')}
                         </p>
                       ) : null}
 

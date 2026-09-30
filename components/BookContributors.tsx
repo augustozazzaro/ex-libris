@@ -7,6 +7,10 @@ import {
   UserRound,
 } from 'lucide-react'
 
+import {
+  cleanPeople,
+} from '@/utils/book-metadata'
+
 type Props = {
   translators?: string[] | null
   editors?: string[] | null
@@ -29,22 +33,30 @@ export default function BookContributors({
   const rows: Row[] = [
     {
       role: 'Traduzione',
-      names: translators ?? [],
+      names: cleanPeople(
+        translators
+      ),
       icon: Languages,
     },
     {
       role: 'Curatela',
-      names: editors ?? [],
+      names: cleanPeople(
+        editors
+      ),
       icon: PenLine,
     },
     {
       role: 'Illustrazioni',
-      names: illustrators ?? [],
+      names: cleanPeople(
+        illustrators
+      ),
       icon: Brush,
     },
     {
       role: 'Introduzione e prefazione',
-      names: introductions ?? [],
+      names: cleanPeople(
+        introductions
+      ),
       icon: UserRound,
     },
   ].filter(

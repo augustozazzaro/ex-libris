@@ -21,6 +21,10 @@ import {
   writeCache,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
+import {
+  cleanBookTitle,
+  cleanPersonName,
+} from '@/utils/book-metadata'
 
 type Book = {
   id: string
@@ -243,7 +247,7 @@ export default function FavoritesPage() {
                     <div className="aspect-[2/3] rounded-[18px] overflow-hidden bg-[#d1d1d6] exl-book-cover">
 
                       <BookCover
-                        title={book.title}
+                        title={cleanBookTitle(book.title)}
                         authors={book.authors}
                         coverUrl={cover}
                         priority={
@@ -254,12 +258,12 @@ export default function FavoritesPage() {
                     </div>
 
                     <p className="font-semibold leading-tight mt-3 line-clamp-2">
-                      {book.title}
+                      {cleanBookTitle(book.title)}
                     </p>
 
                     {book.authors?.[0] && (
                       <p className="text-[#8e8e93] text-sm mt-1 truncate">
-                        {book.authors[0]}
+                        {cleanPersonName(book.authors[0])}
                       </p>
                     )}
 

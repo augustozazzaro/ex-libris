@@ -552,3 +552,16 @@ body {
 .exl-home-clean-card {
   box-shadow: none !important;
 }
+
+/* Reading rail: niente linee/ombre residue */
+.exl-reading-rail-clean,
+.exl-reading-rail-clean * {
+  box-shadow: none !important;
+}
+
+.exl-reading-rail-clean::before,
+.exl-reading-rail-clean::after,
+.exl-reading-rail-clean *::before,
+.exl-reading-rail-clean *::after {
+  box-shadow: none !important;
+}

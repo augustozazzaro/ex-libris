@@ -1324,7 +1324,7 @@ export default function Home() {
           )}
 
 
-          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory exl-scrollbar-none mt-3 pt-1 pb-1 pr-3">
+          <div className="exl-reading-rail-clean flex gap-3 overflow-x-auto snap-x snap-mandatory exl-scrollbar-none mt-3 pr-3 [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
 
             <ReadingHomeTile
               href="/my-books?filter=reading"
@@ -1574,7 +1574,7 @@ function ReadingHomeTile({
     >
       <Link
         href={href}
-        className="exl-glass shadow-none shadow-none block rounded-[23px] p-4 min-h-[126px] exl-press shadow-none"
+        className="block rounded-[23px] p-4 min-h-[126px] exl-press bg-white/72 dark:bg-white/[0.07] border border-black/[0.035] dark:border-white/[0.06] backdrop-blur-[14px] shadow-none"
       >
 
         <div className="flex items-start justify-between gap-3">

@@ -10,6 +10,7 @@ import {
 } from 'react'
 
 import Link from 'next/link'
+import { flushSync } from 'react-dom'
 
 import {
   ArrowLeft,
@@ -125,6 +126,9 @@ export default function ShufflePage() {
   const dragThresholdRef =
     useRef(false)
 
+  const transitionLockRef =
+    useRef(false)
+
   useEffect(() => {
     if (
       typeof window ===
@@ -174,6 +178,16 @@ export default function ShufflePage() {
 
       image.src =
         url
+
+      if (
+        'decode' in image
+      ) {
+        image
+          .decode()
+          .catch(
+            () => {}
+          )
+      }
     }
   }, [
     books,
@@ -527,44 +541,116 @@ export default function ShufflePage() {
     return parts.join(' · ')
   }
 
-  function goNext(
-    feedback = true
+  async function moveCard(
+    nextDirection: 1 | -1,
+    withHaptic = true
   ) {
-    if (books.length <= 1) return
+    if (
+      books.length <= 1 ||
+      transitionLockRef.current
+    ) {
+      return
+    }
 
-    if (feedback) {
+    transitionLockRef.current =
+      true
+
+    dragThresholdRef.current =
+      false
+
+    if (withHaptic) {
       haptic('light')
     }
 
-    setDirection(1)
+    setDirection(
+      nextDirection
+    )
+
     setSaved(false)
 
-    setCurrentIndex(
-      (prev) =>
-        (prev + 1) %
-        books.length
+    const viewportWidth =
+      typeof window !==
+        'undefined'
+        ? window.innerWidth
+        : 420
+
+    const targetX =
+      nextDirection > 0
+        ? -Math.max(
+            viewportWidth *
+              0.82,
+            360
+          )
+        : Math.max(
+            viewportWidth *
+              0.82,
+            360
+          )
+
+    try {
+      const controls =
+        animate(
+          dragX,
+          targetX,
+          {
+            type: 'tween',
+            duration: 0.16,
+            ease: [
+              0.32,
+              0,
+              0.25,
+              1,
+            ],
+          }
+        )
+
+      await controls.finished
+
+      /*
+       * La card è completamente fuori schermo.
+       * Cambiamo libro SINCRONAMENTE, poi la
+       * rimettiamo al centro prima del paint.
+       */
+      flushSync(() => {
+        setCurrentIndex(
+          prev =>
+            nextDirection > 0
+              ? (
+                  prev +
+                  1
+                ) %
+                books.length
+              : (
+                  prev -
+                  1 +
+                  books.length
+                ) %
+                books.length
+        )
+      })
+
+      dragX.set(0)
+    } finally {
+      transitionLockRef.current =
+        false
+    }
+  }
+
+  function goNext(
+    withHaptic = true
+  ) {
+    void moveCard(
+      1,
+      withHaptic
     )
   }
 
   function goPrevious(
-    feedback = true
+    withHaptic = true
   ) {
-    if (books.length <= 1) return
-
-    if (feedback) {
-      haptic('light')
-    }
-
-    setDirection(-1)
-    setSaved(false)
-
-    setCurrentIndex(
-      (prev) =>
-        (
-          prev - 1 +
-          books.length
-        ) %
-        books.length
+    void moveCard(
+      -1,
+      withHaptic
     )
   }
 
@@ -829,41 +915,7 @@ export default function ShufflePage() {
             />
           )}
 
-          <AnimatePresence
-            initial={false}
-            custom={direction}
-            mode="sync"
-          >
             <motion.article
-              key={currentBook.id}
-              custom={direction}
-              initial={{
-                x:
-                  direction > 0
-                    ? 6
-                    : -6,
-                opacity: 1,
-                scale: 0.998,
-              }}
-              animate={{
-                x: 0,
-                opacity: 1,
-                scale: 1,
-              }}
-              exit={{
-                x:
-                  direction > 0
-                    ? -160
-                    : 160,
-                opacity: 0,
-                scale: 0.975,
-              }}
-              transition={{
-                type: 'spring',
-                stiffness: 430,
-                damping: 36,
-                mass: 0.55,
-              }}
 
               drag={
                 books.length > 1
@@ -925,31 +977,26 @@ export default function ShufflePage() {
                 _,
                 info
               ) => {
+                if (
+                  transitionLockRef.current
+                ) {
+                  return
+                }
+
                 const shouldNext =
                   info.offset.x <
-                    -88 ||
+                    -72 ||
                   info.velocity.x <
-                    -650
+                    -520
 
                 const shouldPrevious =
                   info.offset.x >
-                    88 ||
+                    72 ||
                   info.velocity.x >
-                    650
+                    520
 
                 dragThresholdRef.current =
                   false
-
-                animate(
-                  dragX,
-                  0,
-                  {
-                    type: 'spring',
-                    stiffness: 560,
-                    damping: 42,
-                    mass: 0.55,
-                  }
-                )
 
                 if (shouldNext) {
                   goNext(false)
@@ -960,17 +1007,34 @@ export default function ShufflePage() {
                   shouldPrevious
                 ) {
                   goPrevious(false)
+                  return
                 }
+
+                /*
+                 * Swipe non completato:
+                 * ritorno morbido al centro.
+                 */
+                animate(
+                  dragX,
+                  0,
+                  {
+                    type: 'spring',
+                    stiffness: 620,
+                    damping: 44,
+                    mass: 0.48,
+                  }
+                )
               }}
 
               style={{
+                x: dragX,
                 rotate:
                   cardRotate,
                 willChange:
                   'transform',
               }}
 
-              className="relative overflow-hidden rounded-[34px] shadow-[0_16px_42px_rgba(0,0,0,0.13)] cursor-grab active:cursor-grabbing touch-pan-y select-none transform-gpu [backface-visibility:hidden] [contain:paint]"
+className="relative overflow-hidden rounded-[34px] shadow-[0_16px_42px_rgba(0,0,0,0.13)] cursor-grab active:cursor-grabbing touch-pan-y select-none transform-gpu [backface-visibility:hidden] [contain:paint]"
             >
 
               {/* ATMOSFERA DALLA COPERTINA */}
@@ -979,7 +1043,7 @@ export default function ShufflePage() {
               {cover && (
                 <>
                   <div
-                    className="absolute inset-[-50px] bg-cover bg-center blur-[42px] scale-110 opacity-[0.58] dark:opacity-[0.42]"
+                    className="absolute inset-[-24px] bg-cover bg-center blur-[22px] scale-105 opacity-[0.48] transform-gpu dark:opacity-[0.34]"
                     style={{
                       backgroundImage:
                         `url("${cover}")`,
@@ -1211,7 +1275,6 @@ export default function ShufflePage() {
               </div>
 
             </motion.article>
-          </AnimatePresence>
 
           <div className="mt-4 flex items-center justify-center gap-3 text-[#8e8e93]">
 

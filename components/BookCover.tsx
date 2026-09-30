@@ -19,12 +19,82 @@ type Props = {
 }
 
 /*
- * Rimane vivo per tutta la sessione SPA.
- * Se una cover è già comparsa, quando il componente
- * viene rimontato non facciamo riapparire il fallback.
+ * Registro condiviso per tutta la sessione SPA.
+ *
+ * Una cover già caricata non torna al fallback
+ * quando viene rimontata in un'altra pagina.
  */
 const loadedCoverUrls =
   new Set<string>()
+
+/*
+ * Evita preload duplicati della stessa immagine.
+ */
+const preloadingCoverUrls =
+  new Set<string>()
+
+export function preloadBookCover(
+  url?: string | null
+) {
+  if (
+    typeof window ===
+      'undefined' ||
+    !url ||
+    loadedCoverUrls.has(url) ||
+    preloadingCoverUrls.has(url)
+  ) {
+    return
+  }
+
+  preloadingCoverUrls.add(
+    url
+  )
+
+  const image =
+    new Image()
+
+  image.decoding =
+    'async'
+
+  image.onload = () => {
+    loadedCoverUrls.add(
+      url
+    )
+
+    preloadingCoverUrls.delete(
+      url
+    )
+  }
+
+  image.onerror = () => {
+    preloadingCoverUrls.delete(
+      url
+    )
+  }
+
+  image.src =
+    url
+
+  if (
+    typeof image.decode ===
+    'function'
+  ) {
+    image
+      .decode()
+      .then(() => {
+        loadedCoverUrls.add(
+          url
+        )
+
+        preloadingCoverUrls.delete(
+          url
+        )
+      })
+      .catch(
+        () => {}
+      )
+  }
+}
 
 const palettes = [
   {
@@ -72,7 +142,7 @@ function hashString(
   for (
     let i = 0;
     i < value.length;
-    i++
+    i += 1
   ) {
     hash =
       value.charCodeAt(i) +
@@ -81,7 +151,9 @@ function hashString(
     hash |= 0
   }
 
-  return Math.abs(hash)
+  return Math.abs(
+    hash
+  )
 }
 
 function GeneratedCover({
@@ -126,7 +198,6 @@ function GeneratedCover({
           palette.foreground,
       }}
     >
-
       <div
         className="absolute top-0 right-0 w-20 h-20 rounded-bl-[40px] opacity-40"
         style={{
@@ -142,7 +213,6 @@ function GeneratedCover({
       />
 
       <div className="relative">
-
         <h3 className="font-bold text-[16px] leading-[1.08] tracking-[-0.025em] line-clamp-5">
           {title}
         </h3>
@@ -158,9 +228,7 @@ function GeneratedCover({
         <p className="text-[11px] leading-tight opacity-80 line-clamp-3">
           {author}
         </p>
-
       </div>
-
     </div>
   )
 }
@@ -172,6 +240,14 @@ export default function BookCover({
   className = '',
   priority = false,
 }: Props) {
+  const alreadyLoaded =
+    Boolean(
+      coverUrl &&
+      loadedCoverUrls.has(
+        coverUrl
+      )
+    )
+
   const [
     imageFailed,
     setImageFailed,
@@ -183,32 +259,49 @@ export default function BookCover({
     setImageReady,
   ] =
     useState(
-      Boolean(
-        coverUrl &&
-        loadedCoverUrls.has(
-          coverUrl
-        )
-      )
+      alreadyLoaded
     )
 
   useEffect(() => {
-    setImageFailed(false)
-
-    setImageReady(
+    const cached =
       Boolean(
         coverUrl &&
         loadedCoverUrls.has(
           coverUrl
         )
       )
+
+    setImageFailed(
+      false
     )
-  }, [coverUrl])
+
+    setImageReady(
+      cached
+    )
+
+    /*
+     * Le cover importanti vengono iniziate
+     * immediatamente anche prima che il browser
+     * completi il normale rendering dell'img.
+     */
+    if (
+      priority &&
+      coverUrl &&
+      !cached
+    ) {
+      preloadBookCover(
+        coverUrl
+      )
+    }
+  }, [
+    coverUrl,
+    priority,
+  ])
 
   return (
     <div
       className={`relative w-full h-full overflow-hidden ${className}`}
     >
-
       <GeneratedCover
         title={title}
         authors={authors}
@@ -216,38 +309,56 @@ export default function BookCover({
 
       {coverUrl &&
         !imageFailed && (
-        <img
-          src={coverUrl}
-          alt={title}
-          loading="eager"
-          decoding="async"
-          fetchPriority={
-            priority
-              ? 'high'
-              : 'auto'
-          }
-          onLoad={() => {
-            loadedCoverUrls.add(
-              coverUrl
-            )
+          <img
+            src={coverUrl}
+            alt={title}
+            loading={
+              priority
+                ? 'eager'
+                : 'lazy'
+            }
+            decoding="async"
+            fetchPriority={
+              priority
+                ? 'high'
+                : 'auto'
+            }
+            onLoad={event => {
+              loadedCoverUrls.add(
+                coverUrl
+              )
 
-            setImageReady(
-              true
-            )
-          }}
-          onError={() => {
-            setImageFailed(
-              true
-            )
-          }}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-100 ${
-            imageReady
-              ? 'opacity-100'
-              : 'opacity-0'
-          }`}
-        />
-      )}
-
+              /*
+               * complete è particolarmente utile
+               * quando Safari recupera l'immagine
+               * direttamente dalla cache HTTP.
+               */
+              if (
+                event.currentTarget
+                  .naturalWidth >
+                0
+              ) {
+                setImageReady(
+                  true
+                )
+              }
+            }}
+            onError={() => {
+              setImageFailed(
+                true
+              )
+            }}
+            className={`absolute inset-0 w-full h-full object-cover ${
+              alreadyLoaded
+                ? ''
+                : 'transition-opacity duration-150'
+            } ${
+              imageReady
+                ? 'opacity-100'
+                : 'opacity-0'
+            }`}
+          />
+        )}
     </div>
   )
 }

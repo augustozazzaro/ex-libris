@@ -118,6 +118,7 @@ export default function BookDetailHero({
             title={title}
             authors={authors}
             coverUrl={coverUrl}
+            priority
           />
         </motion.div>
 

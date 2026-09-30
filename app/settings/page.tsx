@@ -66,6 +66,14 @@ export default function SettingsPage() {
 
         </div>
 
+        <div className="mt-10 text-center">
+
+          <p className="text-[#8e8e93] text-[11px] font-medium tracking-[0.02em]">
+            Ex Libris · Versione 1.0.0
+          </p>
+
+        </div>
+
       </div>
 
     </main>

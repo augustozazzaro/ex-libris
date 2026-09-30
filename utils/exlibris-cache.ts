@@ -29,7 +29,7 @@ function fullKey(
 export function readCache<T>(
   key: string,
   maxAge =
-    30 * 60 * 1000
+    12 * 60 * 60 * 1000
 ): T | null {
   if (
     typeof window ===
@@ -245,4 +245,117 @@ export function clearExLibrisCache() {
         )
     )
   } catch {}
+}
+
+/*
+ * Rimuove tutte le cache il cui nome logico
+ * inizia con uno dei prefissi indicati.
+ *
+ * Esempio:
+ * removeCachePrefixes([
+ *   `book:${userId}:`,
+ *   `home:${userId}`,
+ * ])
+ */
+export function removeCachePrefixes(
+  prefixes: string[]
+) {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return
+  }
+
+  const storagePrefixes =
+    prefixes.map(
+      prefix =>
+        fullKey(prefix)
+    )
+
+  /*
+   * RAM.
+   */
+  for (
+    const key of
+    Array.from(
+      memoryCache.keys()
+    )
+  ) {
+    if (
+      storagePrefixes.some(
+        prefix =>
+          key.startsWith(
+            prefix
+          )
+      )
+    ) {
+      memoryCache.delete(
+        key
+      )
+    }
+  }
+
+  /*
+   * sessionStorage.
+   */
+  try {
+    const keysToRemove:
+      string[] = []
+
+    for (
+      let index = 0;
+      index <
+      sessionStorage.length;
+      index += 1
+    ) {
+      const key =
+        sessionStorage.key(
+          index
+        )
+
+      if (
+        key &&
+        storagePrefixes.some(
+          prefix =>
+            key.startsWith(
+              prefix
+            )
+        )
+      ) {
+        keysToRemove.push(
+          key
+        )
+      }
+    }
+
+    keysToRemove.forEach(
+      key =>
+        sessionStorage.removeItem(
+          key
+        )
+    )
+  } catch {}
+}
+
+/*
+ * Invalidazione centrale dei dati
+ * che possono cambiare quando viene
+ * modificato un libro o lo stato di lettura.
+ */
+export function invalidateUserLibraryCaches(
+  userId: string
+) {
+  removeCachePrefixes([
+    `home:${userId}`,
+    `catalog:${userId}`,
+    `profile:${userId}`,
+    `shuffle:${userId}`,
+    `favorites:${userId}`,
+    `my-books:${userId}`,
+    `citations:${userId}`,
+    `locations:${userId}`,
+    `loans:${userId}`,
+    `book:${userId}:`,
+  ])
 }

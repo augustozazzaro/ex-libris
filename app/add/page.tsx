@@ -26,7 +26,7 @@ import {
   haptic,
 } from '@/utils/haptics'
 import {
-  removeCaches,
+  invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
@@ -969,12 +969,9 @@ export default function AddBookPage() {
 
     haptic('success')
 
-    removeCaches([
-      `home:${user.id}`,
-      `catalog:${user.id}`,
-      `profile:${user.id}`,
-      `shuffle:${user.id}`,
-    ])
+    invalidateUserLibraryCaches(
+      user.id
+    )
 
     setSaving(false)
 

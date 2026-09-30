@@ -32,7 +32,7 @@ import {
 import {
   readCache,
   writeCache,
-  removeCaches,
+  invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 import LocationPicker from '@/components/LocationPicker'
 import BookCover from '@/components/BookCover'
@@ -505,11 +505,9 @@ export default function BookPage() {
           : 'light'
       )
 
-      removeCaches([
-        `home:${user.id}`,
-        `profile:${user.id}`,
-        `book:${user.id}:${book.id}`,
-      ])
+      invalidateUserLibraryCaches(
+        user.id
+      )
     } else {
       haptic('error')
     }
@@ -880,13 +878,9 @@ export default function BookPage() {
     } = await supabase.auth.getUser()
 
     if (user) {
-      removeCaches([
-        `home:${user.id}`,
-        `catalog:${user.id}`,
-        `profile:${user.id}`,
-        `shuffle:${user.id}`,
-        `book:${user.id}:${book.id}`,
-      ])
+      invalidateUserLibraryCaches(
+        user.id
+      )
     }
 
     setEditing(false)
@@ -913,12 +907,9 @@ export default function BookPage() {
         await supabase.auth.getUser()
 
       if (user) {
-        removeCaches([
-          `home:${user.id}`,
-          `catalog:${user.id}`,
-          `profile:${user.id}`,
-          `shuffle:${user.id}`,
-        ])
+        invalidateUserLibraryCaches(
+          user.id
+        )
       }
 
       router.push('/')

@@ -41,7 +41,7 @@ import { createClient } from '@/utils/supabase/client'
 import {
   readCache,
   writeCache,
-  removeCaches,
+  invalidateUserLibraryCaches,
   clearExLibrisCache,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
@@ -560,9 +560,9 @@ export default function ProfilePage() {
       setSaved(true)
       setEditSnapshot(null)
 
-      removeCaches([
-        `profile:${userId}`,
-      ])
+      invalidateUserLibraryCaches(
+        userId
+      )
 
       setEditing(false)
 
@@ -691,9 +691,9 @@ export default function ProfilePage() {
           url,
       })
 
-      removeCaches([
-        `profile:${userId}`,
-      ])
+      invalidateUserLibraryCaches(
+        userId
+      )
 
       haptic('success')
     } catch (
@@ -811,9 +811,9 @@ export default function ProfilePage() {
         avatarUrl: '',
       })
 
-      removeCaches([
-        `profile:${userId}`,
-      ])
+      invalidateUserLibraryCaches(
+        userId
+      )
 
       haptic('success')
     } catch (

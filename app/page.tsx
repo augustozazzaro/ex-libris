@@ -215,8 +215,6 @@ export default function Home() {
     const [
       booksResult,
       locationsResult,
-      favoriteResult,
-      toReadResult,
       citationResult,
       readingResult,
       profileResult,
@@ -257,46 +255,6 @@ export default function Home() {
           membership.family_id
         )
         .order('name'),
-
-      supabase
-        .from(
-          'user_book_state'
-        )
-        .select(
-          'book_id',
-          {
-            count: 'exact',
-            head: true,
-          }
-        )
-        .eq(
-          'user_id',
-          user.id
-        )
-        .eq(
-          'favorite',
-          true
-        ),
-
-      supabase
-        .from(
-          'user_book_state'
-        )
-        .select(
-          'book_id',
-          {
-            count: 'exact',
-            head: true,
-          }
-        )
-        .eq(
-          'user_id',
-          user.id
-        )
-        .eq(
-          'reading_status',
-          'to_read'
-        ),
 
       supabase
         .from(
@@ -356,6 +314,25 @@ export default function Home() {
       return
     }
 
+    const freshReadingStates =
+      (
+        readingResult.data ??
+        []
+      ) as HomeReadingState[]
+
+    const freshFavoriteCount =
+      freshReadingStates.filter(
+        item =>
+          item.favorite
+      ).length
+
+    const freshToReadCount =
+      freshReadingStates.filter(
+        item =>
+          item.reading_status ===
+          'to_read'
+      ).length
+
     const snapshot:
       HomeSnapshot = {
         books:
@@ -369,14 +346,10 @@ export default function Home() {
           ) as HomeLocation[],
 
         favoriteCount:
-          favoriteResult.count ??
-          cached?.favoriteCount ??
-          0,
+          freshFavoriteCount,
 
         toReadCount:
-          toReadResult.count ??
-          cached?.toReadCount ??
-          0,
+          freshToReadCount,
 
         citationCount:
           citationResult.count ??
@@ -384,10 +357,7 @@ export default function Home() {
           0,
 
         readingStates:
-          (
-            readingResult.data ??
-            []
-          ) as HomeReadingState[],
+          freshReadingStates,
 
         readingGoal:
           profileResult.data

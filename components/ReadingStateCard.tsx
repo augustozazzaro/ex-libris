@@ -17,7 +17,7 @@ import {
   haptic,
 } from '@/utils/haptics'
 import {
-  removeCaches,
+  invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 
 type ReadingStatus =
@@ -141,11 +141,9 @@ export default function ReadingStateCard({
         haptic('medium')
       }
 
-      removeCaches([
-        `home:${user.id}`,
-        `profile:${user.id}`,
-        `shuffle:${user.id}`,
-      ])
+      invalidateUserLibraryCaches(
+        user.id
+      )
 
       window.dispatchEvent(
         new CustomEvent(

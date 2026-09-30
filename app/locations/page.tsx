@@ -28,6 +28,7 @@ import { createClient } from '@/utils/supabase/client'
 import {
   readCache,
   writeCache,
+  invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
@@ -57,6 +58,9 @@ export default function LocationsPage() {
   const supabase = createClient()
 
   const [familyId, setFamilyId] =
+    useState('')
+
+  const [userId, setUserId] =
     useState('')
 
   const [locations, setLocations] =
@@ -118,6 +122,10 @@ export default function LocationsPage() {
       setLoading(false)
       return
     }
+
+    setUserId(
+      user.id
+    )
 
     const cacheKey =
       `locations:${user.id}`
@@ -393,6 +401,12 @@ export default function LocationsPage() {
     setParentId('')
     setShowAdd(false)
 
+    if (userId) {
+      invalidateUserLibraryCaches(
+        userId
+      )
+    }
+
     await loadData()
   }
 
@@ -434,6 +448,12 @@ export default function LocationsPage() {
 
     setEditingLocation(null)
     setSelected(null)
+
+    if (userId) {
+      invalidateUserLibraryCaches(
+        userId
+      )
+    }
 
     await loadData()
   }
@@ -490,6 +510,12 @@ export default function LocationsPage() {
 
     setDeleteTarget(null)
     setSelected(null)
+
+    if (userId) {
+      invalidateUserLibraryCaches(
+        userId
+      )
+    }
 
     await loadData()
   }

@@ -27,7 +27,7 @@ import {
 } from '@/utils/haptics'
 
 import {
-  removeCaches,
+  invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 
 type Props = {
@@ -297,11 +297,9 @@ export default function BookBookmarkCard({
       reachedEnd
     )
 
-    removeCaches([
-      `home:${user.id}`,
-      `profile:${user.id}`,
-      `book:${user.id}:${bookId}`,
-    ])
+    invalidateUserLibraryCaches(
+      user.id
+    )
 
     window.dispatchEvent(
       new CustomEvent(
@@ -456,12 +454,9 @@ export default function BookBookmarkCard({
 
     setShowFinish(false)
 
-    removeCaches([
-      `home:${user.id}`,
-      `profile:${user.id}`,
-      `shuffle:${user.id}`,
-      `book:${user.id}:${bookId}`,
-    ])
+    invalidateUserLibraryCaches(
+      user.id
+    )
 
     window.dispatchEvent(
       new CustomEvent(

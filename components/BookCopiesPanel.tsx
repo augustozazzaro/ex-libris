@@ -29,7 +29,7 @@ import {
 } from '@/utils/supabase/client'
 
 import {
-  removeCaches,
+  invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 
 import {
@@ -222,13 +222,9 @@ export default function BookCopiesPanel({
         .getUser()
 
     if (user) {
-      removeCaches([
-        `home:${user.id}`,
-        `catalog:${user.id}`,
-        `shuffle:${user.id}`,
-        `book:${user.id}:${copy.id}`,
-        `book:${user.id}:${currentBookId}`,
-      ])
+      invalidateUserLibraryCaches(
+        user.id
+      )
     }
 
     haptic('success')
@@ -315,14 +311,9 @@ export default function BookCopiesPanel({
         .getUser()
 
     if (user) {
-      removeCaches([
-        `home:${user.id}`,
-        `catalog:${user.id}`,
-        `profile:${user.id}`,
-        `shuffle:${user.id}`,
-        `book:${user.id}:${copy.id}`,
-        `book:${user.id}:${currentBookId}`,
-      ])
+      invalidateUserLibraryCaches(
+        user.id
+      )
     }
 
     haptic('success')

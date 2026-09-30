@@ -23,7 +23,7 @@ import { createClient } from '@/utils/supabase/client'
 import {
   readCache,
   writeCache,
-  removeCaches,
+  invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 import BookCover from '@/components/BookCover'
 
@@ -328,12 +328,9 @@ export default function LoansPage() {
         bookId
       )
 
-    removeCaches([
-      `loans:${user.id}`,
-      `home:${user.id}`,
-      `catalog:${user.id}`,
-      `shuffle:${user.id}`,
-    ])
+    invalidateUserLibraryCaches(
+      user.id
+    )
 
     setBookId('')
     setBorrower('')
@@ -381,12 +378,9 @@ export default function LoansPage() {
       )
 
     if (user) {
-      removeCaches([
-        `loans:${user.id}`,
-        `home:${user.id}`,
-        `catalog:${user.id}`,
-        `shuffle:${user.id}`,
-      ])
+      invalidateUserLibraryCaches(
+        user.id
+      )
     }
 
     await loadData()

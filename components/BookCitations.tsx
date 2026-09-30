@@ -30,7 +30,7 @@ import {
   haptic,
 } from '@/utils/haptics'
 import {
-  removeCaches,
+  invalidateUserLibraryCaches,
 } from '@/utils/exlibris-cache'
 
 import ExLibrisConfirmDialog from '@/components/ExLibrisConfirmDialog'
@@ -374,10 +374,9 @@ export default function BookCitations({
 
     haptic('success')
 
-    removeCaches([
-      `citations:${user.id}`,
-      `profile:${user.id}`,
-    ])
+    invalidateUserLibraryCaches(
+      user.id
+    )
 
     await loadCitations()
 
@@ -437,10 +436,9 @@ export default function BookCitations({
         )
     )
 
-    removeCaches([
-      `citations:${user.id}`,
-      `profile:${user.id}`,
-    ])
+    invalidateUserLibraryCaches(
+      user.id
+    )
 
     haptic('success')
   }

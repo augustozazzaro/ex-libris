@@ -964,7 +964,7 @@ export default function Home() {
                     href={
                       library.href
                     }
-                    className="group relative block overflow-hidden min-h-[190px] rounded-[32px] bg-white/58 dark:bg-white/[0.065] backdrop-blur-xl border border-white/70 dark:border-white/[0.08] shadow-[0_16px_45px_rgba(0,0,0,0.075)] exl-press"
+                    className="group relative block overflow-hidden min-h-[190px] rounded-[32px] bg-white/58 dark:bg-white/[0.065] backdrop-blur-xl border border-white/70 dark:border-white/[0.08] exl-press"
                   >
 
                     {/* luce molto discreta */}
@@ -1574,7 +1574,7 @@ function ReadingHomeTile({
     >
       <Link
         href={href}
-        className="exl-glass shadow-none block rounded-[23px] p-4 min-h-[126px] exl-press shadow-none"
+        className="exl-glass shadow-none shadow-none block rounded-[23px] p-4 min-h-[126px] exl-press shadow-none"
       >
 
         <div className="flex items-start justify-between gap-3">

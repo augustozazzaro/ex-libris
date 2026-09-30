@@ -546,3 +546,9 @@ body {
     padding-bottom: 24px;
   }
 }
+
+
+/* EX LIBRIS HOME CLEAN CARDS */
+.exl-home-clean-card {
+  box-shadow: none !important;
+}
